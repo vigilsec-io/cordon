@@ -1,0 +1,44 @@
+from pathlib import Path
+from .rules import DEFAULT_RULES, Finding, Rule, Severity, SEVERITY_ORDER
+
+
+class Engine:
+    def __init__(self, rules: list[Rule] | None = None) -> None:
+        self.rules = rules if rules is not None else DEFAULT_RULES
+
+    def scan(self, path: Path) -> list[Finding]:
+        """Scan a single file. Returns findings sorted by severity (CRITICAL first)."""
+        if not path.is_file():
+            return []
+        applicable = [r for r in self.rules if r.applies_to(path)]
+        findings: list[Finding] = []
+        for rule in applicable:
+            findings.extend(rule.check(path))
+        return sorted(findings, key=lambda f: SEVERITY_ORDER[f.severity])
+
+    def scan_dir(self, root: Path, skip: set[str] | None = None) -> dict[Path, list[Finding]]:
+        """Recursively scan all scannable files under root.
+
+        skip: set of directory/path fragment names to exclude.
+        """
+        _skip = skip or {
+            ".venv", "venv", "node_modules", ".git",
+            "build", "dist", "__pycache__", "Pods",
+        }
+        results: dict[Path, list[Finding]] = {}
+        for path in root.rglob("*"):
+            if not path.is_file():
+                continue
+            if any(s in path.parts for s in _skip):
+                continue
+            if not any(r.applies_to(path) for r in self.rules):
+                continue
+            findings = self.scan(path)
+            if findings:
+                results[path] = findings
+        return results
+
+    @staticmethod
+    def blocking(findings: list[Finding]) -> bool:
+        """True if any finding is CRITICAL or HIGH — should block the AI write."""
+        return any(f.severity in (Severity.CRITICAL, Severity.HIGH) for f in findings)
