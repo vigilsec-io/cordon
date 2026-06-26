@@ -1,0 +1,16 @@
+Vigil
+Copyright (c) 2026 Prem Kumar Akula. All rights reserved.
+
+Created: 2026-06-26
+Author: Prem Kumar Akula <prem.fwss@gmail.com>
+
+This software and all associated ideas, algorithms, rule definitions,
+and product concepts are the exclusive intellectual property of
+Prem Kumar Akula.
+
+The VGL-D001 rule (docker-compose port binding to 0.0.0.0 without
+127.0.0.1 prefix) represents a novel detection approach not implemented
+by any known IaC scanning tool as of the creation date above.
+
+Commercial use requires a separate license agreement.
+Contact: prem.fwss@gmail.com
