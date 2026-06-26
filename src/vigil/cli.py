@@ -11,9 +11,10 @@ import json as _json
 import sys
 from pathlib import Path
 
+from .config import load_config
 from .engine import Engine
 from .reporter import report_terminal, report_json, report_sarif
-from .rules import Severity, SEVERITY_ORDER
+from .rules import DEFAULT_RULES, Severity, SEVERITY_ORDER
 
 
 def _find_hook_sh() -> Path | None:
@@ -101,22 +102,26 @@ def main() -> None:
         _run_init(args.global_install)
         return
 
-    engine = Engine()
     path = args.path.resolve()
+    config = load_config(path)
+    rules = [r for r in DEFAULT_RULES if r.id not in config.disabled_rules]
+    engine = Engine(rules=rules)
 
     if path.is_file():
         findings = engine.scan(path)
         results = {path: findings} if findings else {}
     elif path.is_dir():
-        results = engine.scan_dir(path)
+        results = engine.scan_dir(path, extra_skip=set(config.exclude_paths))
     else:
         print(f"vigil: path not found: {path}", file=sys.stderr)
         sys.exit(1)
 
     all_findings = [f for fs in results.values() for f in fs]
 
-    if args.severity:
-        min_order = SEVERITY_ORDER[Severity(args.severity)]
+    # --severity flag takes priority over .vigilrc min_severity
+    effective_sev = args.severity or config.min_severity
+    if effective_sev:
+        min_order = SEVERITY_ORDER[Severity(effective_sev)]
         all_findings = [f for f in all_findings if SEVERITY_ORDER[f.severity] <= min_order]
         results = {
             p: [f for f in fs if SEVERITY_ORDER[f.severity] <= min_order]

@@ -16,15 +16,19 @@ class Engine:
             findings.extend(rule.check(path))
         return sorted(findings, key=lambda f: SEVERITY_ORDER[f.severity])
 
-    def scan_dir(self, root: Path, skip: set[str] | None = None) -> dict[Path, list[Finding]]:
+    def scan_dir(
+        self,
+        root: Path,
+        skip: set[str] | None = None,
+        extra_skip: set[str] | None = None,
+    ) -> dict[Path, list[Finding]]:
         """Recursively scan all scannable files under root.
 
-        skip: set of directory/path fragment names to exclude.
+        skip: replaces the default skip set when provided.
+        extra_skip: merged with the default skip set (use for .vigilrc exclude_paths).
         """
-        _skip = skip or {
-            ".venv", "venv", "node_modules", ".git",
-            "build", "dist", "__pycache__", "Pods",
-        }
+        _default = {".venv", "venv", "node_modules", ".git", "build", "dist", "__pycache__", "Pods"}
+        _skip = (skip if skip is not None else _default) | (extra_skip or set())
         results: dict[Path, list[Finding]] = {}
         for path in root.rglob("*"):
             if not path.is_file():

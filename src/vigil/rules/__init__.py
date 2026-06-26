@@ -8,7 +8,7 @@ from .secrets import (
     ShellTrueRule,
     OsSystemRule,
 )
-from .docker import DockerPortExposureRule
+from .docker import DockerPortExposureRule, DockerComposeEnvSecretRule
 from .dockerfile import DockerfileEnvSecretRule, DockerfileRootUserRule, DockerfileLatestTagRule
 from .nginx import NginxSecurityHeadersRule
 from .trivy import TrivyIacScanRule
@@ -23,8 +23,9 @@ DEFAULT_RULES: list[Rule] = [
     EvalInjectionRule(),
     ShellTrueRule(),
     OsSystemRule(),
-    # Docker IaC — the rule no existing tool catches
+    # Docker IaC
     DockerPortExposureRule(),
+    DockerComposeEnvSecretRule(),
     # Dockerfile hardening
     DockerfileEnvSecretRule(),
     DockerfileRootUserRule(),
@@ -42,7 +43,7 @@ __all__ = [
     "Finding", "Rule", "Severity", "SEVERITY_ORDER", "DEFAULT_RULES",
     "AwsAccessKeyRule", "HardcodedPasswordRule", "HardcodedApiKeyRule",
     "HardcodedTokenRule", "EvalInjectionRule", "ShellTrueRule", "OsSystemRule",
-    "DockerPortExposureRule",
+    "DockerPortExposureRule", "DockerComposeEnvSecretRule",
     "DockerfileEnvSecretRule", "DockerfileRootUserRule", "DockerfileLatestTagRule",
     "NginxSecurityHeadersRule",
     "TrivyIacScanRule",
