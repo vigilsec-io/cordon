@@ -1,0 +1,43 @@
+{
+  "name": "vigil",
+  "version": "0.1.0",
+  "description": "AI coding security co-pilot — blocks insecure IaC, secrets, and Dockerfile misconfigurations at AI generation time",
+  "author": "FWSS (prem.fwss@gmail.com)",
+  "license": "MIT",
+  "keywords": ["security", "iac", "docker", "secrets", "linter", "devsecops"],
+  "hooks": {
+    "PostToolUse": {
+      "matcher": "Write|Edit|MultiEdit",
+      "type": "command",
+      "command": "plugin/hook.sh",
+      "description": "Scans every file written by Claude for security issues. Exits 2 on CRITICAL/HIGH to block the write inline."
+    }
+  },
+  "install": {
+    "steps": [
+      "pip install vigil",
+      "vigil init"
+    ],
+    "global_steps": [
+      "pip install vigil",
+      "vigil init --global"
+    ]
+  },
+  "rules": [
+    {"id": "VGL-D001",   "severity": "CRITICAL", "name": "Docker port binding exposed to 0.0.0.0"},
+    {"id": "VGL-S001",   "severity": "CRITICAL", "name": "AWS access key hardcoded"},
+    {"id": "VGL-S002",   "severity": "CRITICAL", "name": "Hardcoded password"},
+    {"id": "VGL-S003",   "severity": "HIGH",     "name": "Hardcoded API key"},
+    {"id": "VGL-S004",   "severity": "HIGH",     "name": "Hardcoded token"},
+    {"id": "VGL-I001",   "severity": "CRITICAL", "name": "eval() injection risk"},
+    {"id": "VGL-I002",   "severity": "HIGH",     "name": "subprocess shell=True"},
+    {"id": "VGL-I003",   "severity": "HIGH",     "name": "os.system() call"},
+    {"id": "VGL-DF001",  "severity": "HIGH",     "name": "Dockerfile runs as root"},
+    {"id": "VGL-DF002",  "severity": "MEDIUM",   "name": "Dockerfile uses :latest base image"},
+    {"id": "VGL-DF003",  "severity": "HIGH",     "name": "Dockerfile bakes secret into ENV/ARG"},
+    {"id": "VGL-N001",   "severity": "HIGH",     "name": "nginx missing security headers or weak TLS"},
+    {"id": "VGL-T001",   "severity": "HIGH",     "name": "Trivy IaC deep scan — Dockerfile/Terraform"},
+    {"id": "VGL-DEP001", "severity": "HIGH",     "name": "pip-audit CVE findings"},
+    {"id": "VGL-DEP002", "severity": "HIGH",     "name": "npm audit CVE findings"}
+  ]
+}

@@ -2,6 +2,48 @@ import re
 from pathlib import Path
 from .base import Finding, Rule, Severity
 
+_SECRET_NAME = re.compile(
+    r"SECRET|PASSWORD|PASSWD|TOKEN|API_?KEY|PASS|PWD|CREDENTIALS?|CREDS|PRIVATE",
+    re.IGNORECASE,
+)
+
+
+class DockerfileEnvSecretRule(Rule):
+    id = "VGL-DF003"
+    name = "Dockerfile bakes secret into ENV or ARG layer"
+    severity = Severity.HIGH
+
+    _PAT = re.compile(r"^(ENV|ARG)\s+(\w+)=\S+", re.IGNORECASE)
+
+    def applies_to(self, path: Path) -> bool:
+        return "Dockerfile" in path.name
+
+    def check(self, path: Path) -> list[Finding]:
+        try:
+            lines = path.read_text().splitlines()
+        except OSError:
+            return []
+        findings: list[Finding] = []
+        for i, line in enumerate(lines, 1):
+            stripped = line.strip()
+            m = self._PAT.match(stripped)
+            if not m:
+                continue
+            instr, name = m.group(1).upper(), m.group(2)
+            if not _SECRET_NAME.search(name):
+                continue
+            sev = Severity.HIGH if instr == "ENV" else Severity.MEDIUM
+            findings.append(Finding(
+                rule_id=self.id,
+                severity=sev,
+                message=f"Secret baked into {instr} layer: {name}",
+                file_path=path,
+                line=i,
+                snippet=stripped[:120],
+                fix="Inject at runtime via SSM or Docker secrets — never bake into image layers",
+            ))
+        return findings
+
 
 class DockerfileRootUserRule(Rule):
     id = "VGL-DF001"

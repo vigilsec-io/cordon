@@ -3,6 +3,14 @@ import sys
 from pathlib import Path
 from .rules import Finding, Severity
 
+_SARIF_LEVEL = {
+    Severity.CRITICAL: "error",
+    Severity.HIGH: "error",
+    Severity.MEDIUM: "warning",
+    Severity.LOW: "note",
+    Severity.INFO: "note",
+}
+
 _COLORS = {
     Severity.CRITICAL: "\033[91m",
     Severity.HIGH:     "\033[93m",
@@ -45,6 +53,54 @@ def report_terminal(findings: list[Finding], use_color: bool = True) -> None:
             f"Advisory: {len(advisory)} MEDIUM/LOW/INFO finding(s) — not blocking.",
             file=sys.stderr,
         )
+
+
+def report_sarif(results: dict[Path, list[Finding]], tool_version: str = "0.1.0") -> str:
+    all_findings = [f for fs in results.values() for f in fs]
+    rule_index: dict[str, int] = {}
+    for f in all_findings:
+        if f.rule_id not in rule_index:
+            rule_index[f.rule_id] = len(rule_index)
+
+    sarif_rules = [
+        {"id": rid, "name": rid.replace("-", ""), "shortDescription": {"text": rid}}
+        for rid in rule_index
+    ]
+
+    sarif_results = []
+    for path, findings in results.items():
+        for f in findings:
+            sarif_results.append({
+                "ruleId": f.rule_id,
+                "ruleIndex": rule_index[f.rule_id],
+                "level": _SARIF_LEVEL[f.severity],
+                "message": {"text": f.message},
+                "locations": [{
+                    "physicalLocation": {
+                        "artifactLocation": {
+                            "uri": str(path),
+                            "uriBaseId": "%SRCROOT%",
+                        },
+                        "region": {"startLine": f.line or 1},
+                    }
+                }],
+            })
+
+    return json.dumps({
+        "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+        "version": "2.1.0",
+        "runs": [{
+            "tool": {
+                "driver": {
+                    "name": "vigil",
+                    "version": tool_version,
+                    "informationUri": "https://github.com/fwss/vigil",
+                    "rules": sarif_rules,
+                }
+            },
+            "results": sarif_results,
+        }],
+    }, indent=2)
 
 
 def report_json(results: dict[Path, list[Finding]]) -> str:

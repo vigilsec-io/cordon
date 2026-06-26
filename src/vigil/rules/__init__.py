@@ -9,7 +9,9 @@ from .secrets import (
     OsSystemRule,
 )
 from .docker import DockerPortExposureRule
-from .dockerfile import DockerfileRootUserRule, DockerfileLatestTagRule
+from .dockerfile import DockerfileEnvSecretRule, DockerfileRootUserRule, DockerfileLatestTagRule
+from .nginx import NginxSecurityHeadersRule
+from .trivy import TrivyIacScanRule
 from .deps import PipAuditRule, NpmAuditRule
 
 DEFAULT_RULES: list[Rule] = [
@@ -24,8 +26,13 @@ DEFAULT_RULES: list[Rule] = [
     # Docker IaC — the rule no existing tool catches
     DockerPortExposureRule(),
     # Dockerfile hardening
+    DockerfileEnvSecretRule(),
     DockerfileRootUserRule(),
     DockerfileLatestTagRule(),
+    # nginx security
+    NginxSecurityHeadersRule(),
+    # Trivy IaC deep scan
+    TrivyIacScanRule(),
     # Dependency CVE scanning
     PipAuditRule(),
     NpmAuditRule(),
@@ -36,6 +43,8 @@ __all__ = [
     "AwsAccessKeyRule", "HardcodedPasswordRule", "HardcodedApiKeyRule",
     "HardcodedTokenRule", "EvalInjectionRule", "ShellTrueRule", "OsSystemRule",
     "DockerPortExposureRule",
-    "DockerfileRootUserRule", "DockerfileLatestTagRule",
+    "DockerfileEnvSecretRule", "DockerfileRootUserRule", "DockerfileLatestTagRule",
+    "NginxSecurityHeadersRule",
+    "TrivyIacScanRule",
     "PipAuditRule", "NpmAuditRule",
 ]

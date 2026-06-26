@@ -1,17 +1,70 @@
-"""vigil scan <file|dir> [--format terminal|json] [--severity CRITICAL|HIGH|...]
+"""vigil scan <file|dir> [--format terminal|json|sarif] [--severity CRITICAL|HIGH|...]
+vigil init [--global]
 
-Exit codes:
+Exit codes (scan):
   0 — no findings
   1 — advisory findings only (MEDIUM/LOW/INFO)
   2 — CRITICAL or HIGH findings present (causes Claude Code to block the write)
 """
 import argparse
+import json as _json
 import sys
 from pathlib import Path
 
 from .engine import Engine
-from .reporter import report_terminal, report_json
+from .reporter import report_terminal, report_json, report_sarif
 from .rules import Severity, SEVERITY_ORDER
+
+
+def _find_hook_sh() -> Path | None:
+    """Locate plugin/hook.sh relative to this file (works for editable installs)."""
+    here = Path(__file__).resolve().parent
+    candidates = [
+        here.parent.parent / "plugin" / "hook.sh",    # editable: src/vigil/ → project root
+        Path.home() / ".vigil" / "plugin" / "hook.sh",
+        Path("/usr/local/share/vigil/hook.sh"),
+    ]
+    return next((p for p in candidates if p.exists()), None)
+
+
+def _run_init(global_install: bool) -> None:
+    hook_sh = _find_hook_sh()
+    if hook_sh is None:
+        print(
+            "vigil init: could not locate plugin/hook.sh.\n"
+            "Run from the vigil project directory or see plugin/README_INSTALL.md.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    settings_path = (
+        Path.home() / ".claude" / "settings.json"
+        if global_install
+        else Path.cwd() / ".claude" / "settings.json"
+    )
+    settings_path.parent.mkdir(parents=True, exist_ok=True)
+
+    settings: dict = {}
+    if settings_path.exists():
+        try:
+            settings = _json.loads(settings_path.read_text())
+        except (_json.JSONDecodeError, OSError):
+            settings = {}
+
+    post_tool_use: list = settings.setdefault("hooks", {}).setdefault("PostToolUse", [])
+    for entry in post_tool_use:
+        for h in entry.get("hooks", []):
+            if "vigil" in h.get("command", ""):
+                print(f"Vigil hook already installed in {settings_path}")
+                return
+
+    post_tool_use.append({
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [{"type": "command", "command": str(hook_sh)}],
+    })
+    settings_path.write_text(_json.dumps(settings, indent=2) + "\n")
+    print(f"Vigil hook installed → {settings_path}")
+    print("Reload Claude Code to activate.")
 
 
 def main() -> None:
@@ -24,7 +77,7 @@ def main() -> None:
     scan_p = sub.add_parser("scan", help="Scan a file or directory")
     scan_p.add_argument("path", type=Path)
     scan_p.add_argument(
-        "--format", choices=["terminal", "json"], default="terminal",
+        "--format", choices=["terminal", "json", "sarif"], default="terminal",
         help="Output format (default: terminal)",
     )
     scan_p.add_argument(
@@ -33,10 +86,20 @@ def main() -> None:
     )
     scan_p.add_argument("--no-color", action="store_true", help="Disable ANSI color output")
 
+    init_p = sub.add_parser("init", help="Wire the Vigil PostToolUse hook into .claude/settings.json")
+    init_p.add_argument(
+        "--global", dest="global_install", action="store_true",
+        help="Install into ~/.claude/settings.json (user-wide) instead of ./.claude/settings.json",
+    )
+
     args = parser.parse_args()
     if args.command is None:
         parser.print_help()
         sys.exit(0)
+
+    if args.command == "init":
+        _run_init(args.global_install)
+        return
 
     engine = Engine()
     path = args.path.resolve()
@@ -63,6 +126,8 @@ def main() -> None:
 
     if args.format == "json":
         print(report_json(results))
+    elif args.format == "sarif":
+        print(report_sarif(results))
     else:
         for _path, file_findings in results.items():
             report_terminal(file_findings, use_color=not args.no_color)
