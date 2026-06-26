@@ -61,6 +61,102 @@ AI writes file → Vigil scans → CRITICAL/HIGH? → Block + show fix
 
 ---
 
+## Phase Roadmap
+
+### Phase 0 — Core Engine ✅ Done (2026-06-26)
+**Goal:** Working scan engine, all foundational rules, Claude Code hook, tests passing.
+
+| Deliverable | Status |
+|---|---|
+| `vigil scan <file\|dir>` CLI (exit 0/1/2) | ✅ |
+| 12 rules: VGL-S001–S004, VGL-I001–I003, VGL-D001, VGL-DF001–DF002, VGL-DEP001–DEP002 | ✅ |
+| Terminal + JSON output formats | ✅ |
+| `plugin/hook.sh` — Claude Code PostToolUse hook | ✅ |
+| 31 tests, all passing | ✅ |
+| CI pipeline (Gitea Actions) | ✅ |
+| Zero runtime dependencies (stdlib-only) | ✅ |
+
+**Unlocks:** Internal use — wire into this workspace as the primary scan hook.
+
+---
+
+### Phase 1 — Rule Expansion + Claude Code Marketplace
+**Goal:** Expand rule coverage, publish the Claude Code plugin, first external users.
+
+| Deliverable | Notes |
+|---|---|
+| VGL-T001: trivy IaC deep scan | Dockerfile / Terraform — dedupes against DF001/DF002 |
+| VGL-N001: nginx security headers | X-Frame-Options, CSP, HSTS, server_tokens off |
+| VGL-U001: UFW default-deny missing | Deployment scripts that open ports without default deny |
+| VGL-DF003: secrets in ENV/ARG layers | `ENV SECRET=value` persists in image history |
+| SARIF output format (`--format sarif`) | Enables GitHub Advanced Security annotations |
+| Claude Code plugin manifest + install docs | `plugin/manifest.json` + `plugin/README_INSTALL.md` |
+| Publish to Claude Code marketplace | First external distribution channel |
+| `vigil init` command | Writes hook.sh reference into `.claude/settings.json` automatically |
+
+**Rule count target:** 16 rules  
+**Success metric:** 100 Claude Code plugin installs; first "caught a real vuln in someone else's project" report  
+**Unlocks:** Free tier goes public; beachhead story is shareable.
+
+---
+
+### Phase 2 — VS Code Extension + Config File Support
+**Goal:** Reach Copilot/Cursor/Windsurf users; add project-level rule configuration.
+
+| Deliverable | Notes |
+|---|---|
+| VS Code extension (`vigil-vscode`) | `onDidSaveTextDocument` → `vigil scan`; inline Problem annotations |
+| Cursor + Windsurf support | Both use VS Code extension API — same extension, no rewrite |
+| `.vigilrc` / `vigil.toml` config file | Per-project rule enable/disable, custom severity overrides, path excludes |
+| VGL-K001: K8s manifest security | `hostNetwork: true`, `privileged: true`, missing `readOnlyRootFilesystem` |
+| VGL-IAM001: IAM wildcard policy | `"Action": "*"` or `"Resource": "*"` in policy JSON |
+| Custom rule DSL | Users write rules in TOML — pattern + severity + fix message |
+| `--watch` mode | `vigil scan --watch <dir>` — inotify loop for non-hook editors |
+
+**Rule count target:** 22 rules + unlimited custom  
+**Success metric:** VS Code extension 500 installs; 1 blog post / tweet with "Vigil caught X that Checkov missed"  
+**Unlocks:** Custom rule DSL is the foundation for the enterprise rule registry.
+
+---
+
+### Phase 3 — GitHub Actions + Team Dashboard
+**Goal:** Catch AI-generated code in PRs even without the IDE plugin; first paid revenue.
+**H1B gate:** Team dashboard involves Stripe and revenue — requires LLC formed + attorney sign-off.
+
+| Deliverable | Notes |
+|---|---|
+| `vigil-action` GitHub Action | Runs `vigil scan` on changed files; posts SARIF to Advanced Security |
+| Gitea Actions support | First-class (self-hosted Gitea is the primary VCS here) |
+| Team dashboard (FastAPI + React) | Per-developer scan history, finding trends, rule hit rate |
+| Stripe integration | Free → Pro upgrade flow; Team plan billing |
+| API key system | Per-team key for dashboard telemetry upload (same pattern as MCP Trust Ledger) |
+| SSM namespace: `/vigil/*` | `/vigil/stripe_key`, `/vigil/db_url`, `/vigil/anthropic_api_key` |
+| Telegram weekly digest | Top findings across all scanned repos for the week |
+
+**Revenue unlock:** Pro $29/mo, Team $99/mo  
+**Success metric:** 1 paying team customer; dashboard showing real telemetry  
+**H1B path:** Build dashboard code now (behind feature flag); wire Stripe only after LLC.
+
+---
+
+### Phase 4 — Enterprise + JetBrains
+**Goal:** Enterprise compliance use cases; full IDE coverage.
+
+| Deliverable | Notes |
+|---|---|
+| JetBrains plugin | IntelliJ Platform SDK — covers IntelliJ, PyCharm, GoLand, WebStorm |
+| SOC2 evidence export | PDF report: scan coverage %, findings by severity, remediation rate |
+| SIEM integration | CEF/JSON event stream to Splunk, Datadog, or generic webhook |
+| Private rule registry | Enterprise-only rules hosted in the closed-source tier |
+| Audit log | Per-scan log: who ran it, what file, what was found, what was done |
+| SLA + support tiers | Enterprise SLA; dedicated Slack channel for paying customers |
+| On-prem / air-gap install | Docker image for orgs that can't use cloud telemetry |
+
+**Revenue unlock:** Enterprise custom pricing  
+**Success metric:** 1 enterprise pilot (SOC2 compliance team); $10K ARR
+
+---
+
 ## Distribution Strategy
 
 ### Phase 1 — Claude Code Plugin (first mover, no competition)
