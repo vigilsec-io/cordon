@@ -99,7 +99,7 @@ The engine itself is stdlib-only Python — no dependencies, no pip install surp
 
 ## The Rule Corpus: What Vigil Catches
 
-In two weeks of development, Vigil now has 35 rules across nine categories:
+In two weeks of development, Vigil now has 36 rules across ten categories:
 
 **Secrets & Injection** (10 rules)
 Hardcoded AWS keys, passwords, API tokens, JWT secrets, PEM private keys, Stripe live keys, Slack tokens, credential-embedded database URLs, and provider keys (OpenAI, GitHub, GitLab, Google). `eval()` injection. `subprocess(shell=True)`. `os.system()`. AI assistants produce these when they're "helping" with authentication — Vigil catches them before the file saves.
@@ -134,6 +134,9 @@ The Model Context Protocol is how AI agents extend their capabilities. Vigil cat
 
 **Dependency CVEs** (2 rules)
 `pip-audit` and `npm audit` run immediately on every `requirements.txt` or `package.json` touch. Not on schedule. Not in CI. Right now.
+
+**Shell Script Security** (1 rule)
+Deploy scripts frequently fetch a secret from SSM into a shell variable — safe. The anti-pattern is then passing that variable inline on an SSH or subprocess command: `DB_URL="$DB_URL" ssh host "alembic upgrade head"`. The secret value is visible in `ps aux` on both the local and remote machine for the entire duration of the call. VGL-S011 catches this pattern in `.sh`, `.bash`, and `Makefile` files, with correct exclusions for SSM fetch assignments (`VAR=$(aws ssm ...)`) and `export VAR` statements.
 
 **Trivy IaC deep scan** (1 rule)
 Wraps Trivy's config scanner for Dockerfile and Terraform files.

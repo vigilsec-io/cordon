@@ -42,7 +42,7 @@ AI writes file → Vigil scans → CRITICAL/HIGH? → Block + show fix
 
 ---
 
-## Rule Catalog (18 rules — Phase 0 + Phase 1 + Phase 2 core)
+## Rule Catalog (36 rules — Phase 0 + Phase 1 + Phase 2)
 
 | Rule ID | Severity | Phase | What it catches |
 |---|---|---|---|
@@ -50,6 +50,13 @@ AI writes file → Vigil scans → CRITICAL/HIGH? → Block + show fix
 | VGL-S002 | CRITICAL | 0 | Hardcoded password |
 | VGL-S003 | CRITICAL | 0 | Hardcoded API key |
 | VGL-S004 | CRITICAL | 0 | Hardcoded token |
+| VGL-S005 | CRITICAL | 2 | JWT signing secret |
+| VGL-S006 | CRITICAL | 2 | PEM private key |
+| VGL-S007 | CRITICAL | 2 | Credential-embedded DB URL (`postgres://user:pass@host`) |
+| VGL-S008 | CRITICAL | 2 | Stripe live key (`sk_live_...`) |
+| VGL-S009 | CRITICAL | 2 | Slack token (`xoxb-`, `xoxp-`) |
+| VGL-S010 | CRITICAL | 2 | OpenAI / GitHub / GitLab / Google provider keys |
+| VGL-S011 | HIGH | 2 | Shell script secret inline on subprocess/SSH — `ps aux` leak |
 | VGL-I001 | CRITICAL | 0 | `eval()` / `exec()` injection |
 | VGL-I002 | HIGH | 0 | `subprocess(shell=True)` |
 | VGL-I003 | HIGH | 0 | `os.system()` |
@@ -64,6 +71,17 @@ AI writes file → Vigil scans → CRITICAL/HIGH? → Block + show fix
 | VGL-DEP002 | HIGH | 0 | Critical npm CVEs via npm audit |
 | VGL-K001 | CRITICAL/HIGH | 2 | K8s `privileged: true`, `hostNetwork/hostPID/hostIPC: true` |
 | VGL-IAM001 | CRITICAL/HIGH | 2 | IAM policy `"Action": "*"` / `"Resource": "*"` wildcards |
+| VGL-A001 | CRITICAL | 2 | LLM output piped to `subprocess.run()` / `os.system()` |
+| VGL-A002 | HIGH | 2 | Hardcoded `auto_approve = True` / `skip_confirmation = True` |
+| VGL-A003 | HIGH | 2 | Unbounded `while True` loop making LLM calls with no iteration cap |
+| VGL-A004 | HIGH | 2 | LLM response content written directly to filesystem |
+| VGL-PI001 | CRITICAL | 2 | User input embedded in system prompt |
+| VGL-PI002 | HIGH | 2 | Raw `request.body` passed as LLM message content |
+| VGL-PI003 | HIGH | 2 | `str.format()` on `system_prompt` with user-controlled data |
+| VGL-PI004 | MEDIUM | 2 | Unsanitized tool output appended to conversation |
+| VGL-MCP001 | CRITICAL | 2 | Injection strings in MCP tool descriptions |
+| VGL-MCP002 | HIGH | 2 | Dynamic MCP tool descriptions from user-controlled data |
+| VGL-MCP003 | HIGH | 2 | Shell execution inside MCP handlers without sandbox |
 
 ---
 
