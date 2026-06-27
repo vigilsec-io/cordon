@@ -7,6 +7,12 @@ from .secrets import (
     EvalInjectionRule,
     ShellTrueRule,
     OsSystemRule,
+    JwtSecretRule,
+    PemPrivateKeyRule,
+    CredentialUrlRule,
+    StripeLiveKeyRule,
+    SlackTokenRule,
+    GenericProviderKeyRule,
 )
 from .docker import DockerPortExposureRule, DockerComposeEnvSecretRule
 from .dockerfile import DockerfileEnvSecretRule, DockerfileRootUserRule, DockerfileLatestTagRule
@@ -15,13 +21,28 @@ from .trivy import TrivyIacScanRule
 from .deps import PipAuditRule, NpmAuditRule
 from .k8s import K8sSecurityRule
 from .iam import IamWildcardRule
+from .agency import LlmShellExecRule, AutoApprovalBypassRule, UnboundedAgentLoopRule, LlmOutputFileWriteRule
+from .mcp_security import McpToolPoisoningRule, McpDynamicDescriptionRule, McpShellToolRule
+from .prompt_injection import (
+    UserInputInSystemPromptRule,
+    RawRequestAsLlmContentRule,
+    TemplateInjectionInPromptRule,
+    UnsanitizedToolOutputRule,
+)
 
 DEFAULT_RULES: list[Rule] = [
-    # Secrets / injection — applies to all text file types
+    # Secrets — hardcoded credentials
     AwsAccessKeyRule(),
     HardcodedPasswordRule(),
     HardcodedApiKeyRule(),
     HardcodedTokenRule(),
+    JwtSecretRule(),
+    PemPrivateKeyRule(),
+    CredentialUrlRule(),
+    StripeLiveKeyRule(),
+    SlackTokenRule(),
+    GenericProviderKeyRule(),
+    # Code injection
     EvalInjectionRule(),
     ShellTrueRule(),
     OsSystemRule(),
@@ -43,12 +64,28 @@ DEFAULT_RULES: list[Rule] = [
     K8sSecurityRule(),
     # IAM policy wildcards
     IamWildcardRule(),
+    # Excessive agency — AI agents without human oversight
+    LlmShellExecRule(),
+    AutoApprovalBypassRule(),
+    UnboundedAgentLoopRule(),
+    LlmOutputFileWriteRule(),
+    # MCP server security
+    McpToolPoisoningRule(),
+    McpDynamicDescriptionRule(),
+    McpShellToolRule(),
+    # Prompt injection in AI-calling code
+    UserInputInSystemPromptRule(),
+    RawRequestAsLlmContentRule(),
+    TemplateInjectionInPromptRule(),
+    UnsanitizedToolOutputRule(),
 ]
 
 __all__ = [
     "Finding", "Rule", "Severity", "SEVERITY_ORDER", "DEFAULT_RULES",
     "AwsAccessKeyRule", "HardcodedPasswordRule", "HardcodedApiKeyRule",
     "HardcodedTokenRule", "EvalInjectionRule", "ShellTrueRule", "OsSystemRule",
+    "JwtSecretRule", "PemPrivateKeyRule", "CredentialUrlRule",
+    "StripeLiveKeyRule", "SlackTokenRule", "GenericProviderKeyRule",
     "DockerPortExposureRule", "DockerComposeEnvSecretRule",
     "DockerfileEnvSecretRule", "DockerfileRootUserRule", "DockerfileLatestTagRule",
     "NginxSecurityHeadersRule",
@@ -56,4 +93,8 @@ __all__ = [
     "PipAuditRule", "NpmAuditRule",
     "K8sSecurityRule",
     "IamWildcardRule",
+    "LlmShellExecRule", "AutoApprovalBypassRule", "UnboundedAgentLoopRule", "LlmOutputFileWriteRule",
+    "McpToolPoisoningRule", "McpDynamicDescriptionRule", "McpShellToolRule",
+    "UserInputInSystemPromptRule", "RawRequestAsLlmContentRule",
+    "TemplateInjectionInPromptRule", "UnsanitizedToolOutputRule",
 ]

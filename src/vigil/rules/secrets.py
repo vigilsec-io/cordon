@@ -91,3 +91,53 @@ class OsSystemRule(_GrepRule):
     severity = Severity.HIGH
     pattern = r"""\bos\.system\s*\("""
     fix = "Replace with subprocess.run() — safer, captures output, raises on error."
+
+
+# ── VGL-S005–S010: Extended secret patterns ────────────────────────────────────
+
+class JwtSecretRule(_GrepRule):
+    id = "VGL-S005"
+    name = "Hardcoded JWT secret"
+    severity = Severity.CRITICAL
+    pattern = r"""(?i)(jwt_secret|jwt_key|secret_key)\s*=\s*["'][^"']{8,}["']"""
+    fix = "Move JWT secret to SSM SecureString. Rotate the signing key immediately."
+
+
+class PemPrivateKeyRule(_GrepRule):
+    id = "VGL-S006"
+    name = "PEM private key in source"
+    severity = Severity.CRITICAL
+    pattern = r"-----BEGIN (RSA |EC |DSA |OPENSSH )?PRIVATE KEY-----"
+    fix = "Never commit private keys. Move to SSM SecureString or a secrets vault and rotate immediately."
+
+
+class CredentialUrlRule(_GrepRule):
+    id = "VGL-S007"
+    name = "Database URL with embedded credentials"
+    severity = Severity.CRITICAL
+    pattern = r"(?i)(postgres|postgresql|mysql|mongodb(\+srv)?|redis|amqp|mssql)://[^:@\s]+:[^@\s]+@"
+    fix = "Extract credentials from the URL. Read user/password from SSM and construct the URL at runtime."
+
+
+class StripeLiveKeyRule(_GrepRule):
+    id = "VGL-S008"
+    name = "Stripe live secret key"
+    severity = Severity.CRITICAL
+    pattern = r"sk_live_[0-9a-zA-Z]{24,}"
+    fix = "Rotate at dashboard.stripe.com immediately. Move to SSM SecureString."
+
+
+class SlackTokenRule(_GrepRule):
+    id = "VGL-S009"
+    name = "Slack token hardcoded"
+    severity = Severity.CRITICAL
+    pattern = r"xox[bpears]-[0-9A-Za-z]{10,}-[0-9A-Za-z\-]+"
+    fix = "Rotate at api.slack.com/apps. Move to SSM SecureString."
+
+
+class GenericProviderKeyRule(_GrepRule):
+    id = "VGL-S010"
+    name = "Provider API key hardcoded (OpenAI / GitHub / GitLab / Google)"
+    severity = Severity.CRITICAL
+    pattern = r"(?:sk-[a-zA-Z0-9]{20,}|gh[ps]_[a-zA-Z0-9]{36,}|glpat-[a-zA-Z0-9_\-]{20,}|AIza[0-9A-Za-z\-_]{35})"
+    fix = "Rotate this key at the provider's console immediately. Move to SSM SecureString."
