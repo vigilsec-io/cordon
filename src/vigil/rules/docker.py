@@ -109,7 +109,9 @@ class DockerComposeEnvSecretRule(Rule):
             m = self._LIST_PAT.match(stripped)
             if m:
                 name, val = m.group(1), m.group(2).strip()
-                if val and _SECRET_NAME.search(name) and not _is_var_ref(val):
+                if (val and _SECRET_NAME.search(name)
+                        and not _is_var_ref(val)
+                        and not _is_file_secret_ref(name, val)):
                     findings.append(Finding(
                         rule_id=self.id,
                         severity=self.severity,
@@ -128,7 +130,9 @@ class DockerComposeEnvSecretRule(Rule):
             m = self._MAP_PAT.match(stripped)
             if m:
                 name, val = m.group(1), m.group(2).strip()
-                if val and _SECRET_NAME.search(name) and not _is_var_ref(val):
+                if (val and _SECRET_NAME.search(name)
+                        and not _is_var_ref(val)
+                        and not _is_file_secret_ref(name, val)):
                     findings.append(Finding(
                         rule_id=self.id,
                         severity=self.severity,
