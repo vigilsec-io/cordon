@@ -151,6 +151,12 @@ New category — catches the security anti-patterns unique to AI-generated agent
 | VGL-MCP002 | HIGH | Dynamic tool descriptions built from user-controlled data |
 | VGL-MCP003 | HIGH | Shell execution inside MCP handlers without a sandbox |
 
+### Shell Scripts (1 rule)
+
+| Rule | Severity | What it catches |
+|------|----------|----------------|
+| VGL-S011 | HIGH | Secret variable passed inline to subprocess or SSH command — visible in `ps aux` on both machines |
+
 ### Dependency CVEs (2 rules)
 
 | Rule | Severity | What it catches |
