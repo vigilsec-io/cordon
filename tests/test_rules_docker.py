@@ -160,3 +160,60 @@ def test_d002_does_not_apply_to_python(tmp_path):
     f = tmp_path / "main.py"
     f.write_text("")
     assert env_rule.applies_to(f) is False
+
+
+# ── _FILE suffix regression (Docker secrets pattern) ─────────────────────────
+
+_COMPOSE_DOCKER_SECRETS = """\
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: forge
+      POSTGRES_USER: forge
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+    secrets:
+      - db_password
+secrets:
+  db_password:
+    file: /home/ubuntu/forge/.db_password
+"""
+
+_COMPOSE_DOCKER_SECRETS_LIST = """\
+services:
+  db:
+    environment:
+      - POSTGRES_PASSWORD_FILE=/run/secrets/db_password
+"""
+
+_COMPOSE_REAL_HARDCODED_FILE_VAR = """\
+services:
+  db:
+    environment:
+      POSTGRES_PASSWORD_FILE: /some/other/path/plaintext_password
+"""
+
+
+def test_docker_file_secret_pattern_not_flagged_map(tmp_path):
+    """POSTGRES_PASSWORD_FILE: /run/secrets/... is Docker's secure pattern — must not be flagged."""
+    f = tmp_path / "docker-compose.yml"
+    f.write_text(_COMPOSE_DOCKER_SECRETS)
+    findings = env_rule.check(f)
+    assert findings == [], f"Expected no findings, got: {findings}"
+
+
+def test_docker_file_secret_pattern_not_flagged_list(tmp_path):
+    """List-style _FILE=/run/secrets/... is also safe — Docker secrets."""
+    f = tmp_path / "docker-compose.yml"
+    f.write_text(_COMPOSE_DOCKER_SECRETS_LIST)
+    findings = env_rule.check(f)
+    assert findings == [], f"Expected no findings, got: {findings}"
+
+
+def test_file_suffix_non_secrets_path_still_flagged(tmp_path):
+    """_FILE suffix with a non-/run/secrets/ path is not a Docker secret — still flag it."""
+    f = tmp_path / "docker-compose.yml"
+    f.write_text(_COMPOSE_REAL_HARDCODED_FILE_VAR)
+    findings = env_rule.check(f)
+    assert len(findings) == 1
+    assert "POSTGRES_PASSWORD_FILE" in findings[0].message
