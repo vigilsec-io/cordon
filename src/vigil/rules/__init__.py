@@ -13,6 +13,8 @@ from .dockerfile import DockerfileEnvSecretRule, DockerfileRootUserRule, Dockerf
 from .nginx import NginxSecurityHeadersRule
 from .trivy import TrivyIacScanRule
 from .deps import PipAuditRule, NpmAuditRule
+from .k8s import K8sSecurityRule
+from .iam import IamWildcardRule
 
 DEFAULT_RULES: list[Rule] = [
     # Secrets / injection — applies to all text file types
@@ -37,6 +39,10 @@ DEFAULT_RULES: list[Rule] = [
     # Dependency CVE scanning
     PipAuditRule(),
     NpmAuditRule(),
+    # Kubernetes manifest security
+    K8sSecurityRule(),
+    # IAM policy wildcards
+    IamWildcardRule(),
 ]
 
 __all__ = [
@@ -48,4 +54,6 @@ __all__ = [
     "NginxSecurityHeadersRule",
     "TrivyIacScanRule",
     "PipAuditRule", "NpmAuditRule",
+    "K8sSecurityRule",
+    "IamWildcardRule",
 ]
