@@ -29,6 +29,7 @@ from .prompt_injection import (
     TemplateInjectionInPromptRule,
     UnsanitizedToolOutputRule,
 )
+from .shell import ShellSecretInjectionRule
 
 DEFAULT_RULES: list[Rule] = [
     # Secrets — hardcoded credentials
@@ -78,6 +79,8 @@ DEFAULT_RULES: list[Rule] = [
     RawRequestAsLlmContentRule(),
     TemplateInjectionInPromptRule(),
     UnsanitizedToolOutputRule(),
+    # Shell script secret leakage
+    ShellSecretInjectionRule(),
 ]
 
 __all__ = [
