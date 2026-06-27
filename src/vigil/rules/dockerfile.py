@@ -18,6 +18,10 @@ class DockerfileEnvSecretRule(Rule):
     def applies_to(self, path: Path) -> bool:
         return "Dockerfile" in path.name
 
+    _CRED_URL = re.compile(
+        r"(?i)(postgres|postgresql|mysql|mongodb(\+srv)?|redis|amqp|mssql)://[^:@\s]+:[^@\s]+@",
+    )
+
     def check(self, path: Path) -> list[Finding]:
         try:
             lines = path.read_text().splitlines()
@@ -30,6 +34,20 @@ class DockerfileEnvSecretRule(Rule):
             if not m:
                 continue
             instr, name = m.group(1).upper(), m.group(2)
+            # Value-based: credential-embedded URL regardless of key name (issue #1)
+            value_part = stripped[m.end():]
+            if self._CRED_URL.search(value_part):
+                findings.append(Finding(
+                    rule_id=self.id,
+                    severity=Severity.CRITICAL,
+                    message=f"Credential-embedded URL baked into {instr} layer: {name}",
+                    file_path=path,
+                    line=i,
+                    snippet=stripped[:120],
+                    fix="Never bake DB URLs with credentials into images. Inject at runtime from SSM.",
+                ))
+                continue
+            # Name-based: secret key name with any value
             if not _SECRET_NAME.search(name):
                 continue
             sev = Severity.HIGH if instr == "ENV" else Severity.MEDIUM

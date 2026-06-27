@@ -7,13 +7,29 @@ class Engine:
         self.rules = rules if rules is not None else DEFAULT_RULES
 
     def scan(self, path: Path) -> list[Finding]:
-        """Scan a single file. Returns findings sorted by severity (CRITICAL first)."""
+        """Scan a single file. Returns findings sorted by severity (CRITICAL first).
+
+        Lines containing '# vigil: ignore' are suppressed — same pattern as
+        '# noqa' (flake8) and '# nosec' (bandit).
+        """
         if not path.is_file():
             return []
+        try:
+            source_lines = path.read_text(errors="ignore").splitlines()
+        except OSError:
+            source_lines = []
+
         applicable = [r for r in self.rules if r.applies_to(path)]
         findings: list[Finding] = []
         for rule in applicable:
-            findings.extend(rule.check(path))
+            for f in rule.check(path):
+                if (
+                    f.line
+                    and f.line <= len(source_lines)
+                    and "# vigil: ignore" in source_lines[f.line - 1]
+                ):
+                    continue
+                findings.append(f)
         return sorted(findings, key=lambda f: SEVERITY_ORDER[f.severity])
 
     def scan_dir(
