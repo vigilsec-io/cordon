@@ -7,7 +7,7 @@
 
 ## Last Updated: 2026-06-27
 
-**Status:** 35 rules, 169 tests, all passing. Pushed to Gitea (c4bf936). Telemetry module shipped. Gitea tickets #1, #3, #5, #10, #12 closed. Next: VS Code extension scaffold + PyPI publish prep.
+**Status:** 36 rules, 188 tests, all passing. PyPI package (`vigilsec` 0.1.0) published. README.md written. Cloudflare redirect `thefwss.com/vigil` → Typeform live. Medium article reformatted for Medium's native editor. Next: VS Code extension scaffold.
 
 ---
 
@@ -44,34 +44,37 @@
 14. ✅ **Gitea tickets closed** — #1, #3, #5, #10, #12 all closed with fix references
 15. ✅ **docs/PROJECT_STATE.md** — ASCII architecture diagram + state snapshot
 16. ✅ **docs/MEDIUM_ARTICLE.md** — full Medium article draft (3 title variants)
+17. ✅ **VGL-S011** — shell script secret inline on subprocess/SSH (`ps aux` leak); `src/vigil/rules/shell.py`; 16 tests; closes Gitea #15
+18. ✅ **Typeform waitlist** — `thefwss.com/vigil` Cloudflare redirect → `https://form.typeform.com/to/AEs5yinT`; `vigil feedback` command wired
+19. ✅ **README.md** — full install guide, 36-rule catalog, `.vigilrc` reference, `# vigil: ignore` docs, telemetry opt-out, "Adding a Rule" section
+20. ✅ **PyPI published** — `vigilsec` 0.1.0 on PyPI; `pip install vigilsec`; `pyproject.toml` updated (BUSL-1.1, project URLs, keywords)
+21. ✅ **Medium article reformatted** — `docs/MEDIUM_ARTICLE.md` rewritten for Medium's native editor: no markdown tables, H2/H3 headings, block quotes, prose competitive comparison; 3 title variants; Typeform CTA
 
 ---
 
-## Next Steps — Phase 3 Prep
+## Next Steps — Phase 3
 
 **Resume instruction:** Start with step 1.
 
-1. **VS Code extension scaffold** (`vigil-vscode/`) — `package.json` + `extension.ts` stub
-   - Trigger: `onDidSaveTextDocument` → `vigil scan <file>` → inline `vscode.Diagnostic` on any CRITICAL/HIGH
-   - Entry point: `extension.ts` calls `child_process.exec(vigil scan --format json ...)`
-   - `package.json`: `engines.vscode`, `contributes.commands` (Vigil: Scan File), `activationEvents`
-   - Build: `vsce package` → `.vsix`; test via "Install from VSIX" in VS Code
+1. ✅ **VS Code extension scaffold** — `vigil-vscode/` complete; `vigil-security-0.1.0.vsix` built
+   - `src/extension.ts` — `onDidSaveTextDocument` → `vigil scan --format json` → inline Diagnostics
+   - Status bar: `$(shield) Vigil` / `$(error) Vigil: N CRITICAL/HIGH` / `$(warning) Vigil: N advisory`
+   - Settings: `vigil.enabled`, `vigil.scanOnSave`, `vigil.executablePath`, `vigil.minSeverity`
+   - Commands: `Vigil: Scan Current File`, `Vigil: Scan Workspace`
+   - Auto-detects vigil in PATH, `~/.local/bin`, macOS Python Library paths, `/opt/homebrew/bin`
+   - **Next:** test locally via "Install from VSIX", then publish to VS Code Marketplace
 
-2. **README.md** — required before PyPI publish; no README exists yet
-   - Include: what it is, install (`pip install vigil`), usage, rule list table, `vigil init`, `.vigilrc` ref
-   - Hook it into `pyproject.toml` as `readme = "README.md"`
-
-3. **PyPI publish prep** — `python3 -m build && twine check dist/*`
-   - Add `[project.urls]` to `pyproject.toml`
-   - Upload with `twine upload dist/*` (H1B-safe — free open-source package)
-
-4. **GitHub Actions integration** (ticket #2 or #4) — `vigil-action/action.yml`
+2. **GitHub Actions integration** (ticket #2) — `vigil-action/action.yml`
    - `uses: fwss/vigil-action@v1` in any CI workflow
    - SARIF output → GitHub Security tab annotations
 
-5. **`vigil stats` command** — reads `~/.vigil/events.jsonl`; prints top-10 rules by frequency
+3. **`vigil stats` command** — reads `~/.vigil/events.jsonl`; prints top-10 rules by frequency
    - Surfaces: "You've blocked 47 CRITICAL findings. Top rule: VGL-D001 (23 hits)"
-   - Motivates continued use; data is already captured by telemetry module
+   - Data is already captured by telemetry module; just needs the display command
+
+4. ✅ **Medium article published** — live at official account
+   - URL: https://medium.com/@rjbdjnf/i-built-12-apps-with-ai-every-one-had-the-same-security-hole-so-i-built-a-tool-that-fixes-it-edf42a9aa546
+   - Topics: Artificial Intelligence, Security, Software Engineering, Docker, Python
 
 ---
 
@@ -98,7 +101,7 @@
 | Phase 0 — Core engine | ✅ Complete | 12 rules, 31 tests, CLI, hook, Gitea |
 | Phase 1 — Rule expansion | ✅ Complete | +3 rules, SARIF, plugin manifest, 65 tests |
 | Phase 2 — Config + AI-era rules | ✅ Complete | 35 rules, 169 tests, telemetry, tickets closed |
-| Phase 3 — Distribution (VS Code + PyPI) | 🔄 Next | README → PyPI → VS Code ext scaffold |
+| Phase 3 — Distribution (VS Code + PyPI) | 🔄 In Progress | PyPI ✅, README ✅, Medium ✅; VS Code ext next |
 | Phase 4 — GitHub Actions + Team dashboard | ⏳ Future | H1B gated on revenue features |
 | Phase 5 — Enterprise + JetBrains | ⏳ Future | SOC2, SIEM, on-prem |
 
@@ -108,11 +111,12 @@
 
 | Metric | Value |
 |--------|-------|
-| Total rules | 35 |
-| Total tests | 169 |
-| Test runtime | 0.17s |
-| Gitea commit | c4bf936 |
-| Lines of source | ~1,400 |
+| Total rules | 36 |
+| Total tests | 188 |
+| Test runtime | 0.18s |
+| Gitea commit | c4bf936 (pre-S011/telemetry/README/PyPI) |
+| PyPI package | `vigilsec` 0.1.0 |
+| Lines of source | ~1,600 |
 
 ---
 

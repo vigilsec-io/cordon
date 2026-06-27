@@ -1,0 +1,70 @@
+{
+  "name": "vigil-security",
+  "displayName": "Vigil Security",
+  "description": "AI coding security co-pilot — blocks insecure code at generation time. Catches docker-compose port exposure, secrets, AI agent patterns, and more.",
+  "version": "0.1.0",
+  "publisher": "vigilsec",
+  "license": "BUSL-1.1",
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": ["Linters"],
+  "keywords": ["security", "docker", "devsecops", "ai", "linter", "secrets"],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vigilsec/vigil"
+  },
+  "homepage": "https://thefwss.com/vigil",
+  "activationEvents": ["onStartupFinished"],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "vigil.scanFile",
+        "title": "Vigil: Scan Current File"
+      },
+      {
+        "command": "vigil.scanWorkspace",
+        "title": "Vigil: Scan Workspace"
+      }
+    ],
+    "configuration": {
+      "title": "Vigil Security",
+      "properties": {
+        "vigil.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable Vigil security scanning."
+        },
+        "vigil.scanOnSave": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically scan files when saved."
+        },
+        "vigil.executablePath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to the vigil executable. Leave empty to auto-detect from PATH. Example: /usr/local/bin/vigil"
+        },
+        "vigil.minSeverity": {
+          "type": "string",
+          "enum": ["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO"],
+          "default": "HIGH",
+          "description": "Minimum severity level to show in the Problems panel."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "vsce package",
+    "lint": "eslint src --ext ts"
+  },
+  "devDependencies": {
+    "@types/node": "^18.0.0",
+    "@types/vscode": "^1.74.0",
+    "@vscode/vsce": "^2.22.0",
+    "typescript": "^5.3.0"
+  }
+}

@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>I Built 12 Apps with AI. Every One Had the Same Security Hole. So I Built a Tool That Fixes It.</title>
+</head>
+<body>
+
+<h1>I Built 12 Apps with AI. Every One Had the Same Security Hole. So I Built a Tool That Fixes It.</h1>
+
+<p><em>The security gap no one talks about: AI coding assistants generate insecure infrastructure by default — and every existing scanner misses it.</em></p>
+
+<hr>
+
+<p>There's a vulnerability that lives in almost every project built with an AI coding assistant. It's not subtle. It's not theoretical. It's a single line in a <code>docker-compose.yml</code> that exposes your database to the entire internet — and Checkov, Trivy, Snyk, and Semgrep all give it a clean bill of health.</p>
+
+<p>I found it the hard way. Then I built something about it.</p>
+
+<hr>
+
+<h2>The Setup</h2>
+
+<p>Over the past year, I've been building a series of production applications with AI as my primary coding partner — backend APIs, data pipelines, mobile apps, agent systems. Twelve projects in total, spread across different tech stacks and domains.</p>
+
+<p>I also ran a rigorous security setup. Every project had gitleaks and trufflehog for secret scanning, bandit and semgrep for Python SAST, trivy for container and dependency CVEs, and snyk for software composition analysis. Weekly automated scans across all twelve repos.</p>
+
+<p>I thought I was covered.</p>
+
+<p>Then, during a routine audit, I ran Checkov on a <code>docker-compose.yml</code>. Zero findings. Ran Trivy config scan. Zero findings. Ran Snyk. Zero findings.</p>
+
+<p>The file had this in it:</p>
+
+<pre><code>services:
+  api:
+    ports:
+      - "8000:8000"  # FastAPI
+  db:
+    ports:
+      - "5432:5432"  # PostgreSQL — directly exposed
+  cache:
+    ports:
+      - "6379:6379"  # Redis — directly exposed
+</code></pre>
+
+<p>PostgreSQL and Redis, binding to <code>0.0.0.0</code>. Reachable from anywhere. On a production server.</p>
+
+<hr>
+
+<h2>Why Every Scanner Misses It</h2>
+
+<p>The reason this flies under the radar is subtle but important. Docker's networking model has a non-obvious behavior: when you write <code>"5432:5432"</code> in a compose file, Docker doesn't just open that port. It rewrites <code>iptables</code> rules directly — bypassing UFW entirely. Your firewall thinks port 5432 is closed. The internet disagrees.</p>
+
+<p>The correct form is <code>"127.0.0.1:5432:5432"</code> — binding to localhost only.</p>
+
+<p>Checkov, Trivy, Semgrep, and Snyk all parse docker-compose files. None of them check for this pattern. I confirmed it across all four tools on the same file. Unanimous miss.</p>
+
+<p>This wasn't a minor oversight in one project. I found the same pattern across the majority of my repos. The AI had generated it every time — because <code>"PORT:PORT"</code> is what dominates training data. It's the common example in every tutorial, every Stack Overflow answer, every GitHub repository the model learned from.</p>
+
+<blockquote><strong>AI coding assistants reproduce the most common patterns in their training data. The most common patterns are insecure defaults.</strong></blockquote>
+
+<hr>
+
+<h2>The Insight That Changed Everything</h2>
+
+<p>The conventional security tooling model assumes a human wrote the code. The tools run after commit, after push, in CI — sometimes hours later.</p>
+
+<p>But when an AI is generating code at 100 lines per minute, the window between "AI writes insecure infrastructure" and "that infrastructure is running in production" can be minutes, not hours. CI-gate security has a fundamentally different threat model than AI-generated security.</p>
+
+<p>What you need isn't a better CI scanner. You need something that intercepts the AI <em>at the moment of generation</em> — before the file is even saved.</p>
+
+<blockquote>That's the insight behind Vigil.</blockquote>
+
+<hr>
+
+<h2>How Vigil Works</h2>
+
+<p>Claude Code (Anthropic's AI coding CLI) exposes a <code>PostToolUse</code> hook — a shell command that runs every time the AI writes or edits a file. Vigil plugs into this hook:</p>
+
+<pre><code>AI writes file
+     │
+     ▼
+plugin/hook.sh  ←── PostToolUse fires
+     │
+     ▼
+vigil scan &lt;file&gt;
+     │
+     ├─── Engine runs all applicable rules
+     │
+     ├─── exit 0  →  write proceeds silently
+     ├─── exit 1  →  advisory findings (MEDIUM/LOW)
+     └─── exit 2  →  CRITICAL/HIGH found → Claude Code BLOCKS the write
+</code></pre>
+
+<p>Exit code 2 is the key. Claude Code reads the hook's exit code and refuses to complete the file write if it's non-zero. The insecure file never hits disk.</p>
+
+<p>The engine itself is stdlib-only Python — no dependencies, no pip install surprises, no supply chain surface. It installs in five seconds and works anywhere Python 3.11+ exists.</p>
+
+<hr>
+
+<h2>The Rule Corpus: What Vigil Catches</h2>
+
+<p>Vigil has 36 rules across ten categories. Here's what makes the corpus interesting — it's not a clone of existing tools.</p>
+
+<h3>Secrets &amp; Injection</h3>
+
+<p>The usual suspects: hardcoded AWS keys, passwords, API tokens, JWT signing secrets, PEM private keys, credential-embedded database URLs (<code>postgres://user:pass@host</code>), Stripe live keys, Slack tokens, and provider keys (OpenAI, GitHub, GitLab, Google). Plus the injection classics: <code>eval()</code> with variable input, <code>subprocess(shell=True)</code>, <code>os.system()</code>.</p>
+
+<p>These are the AI-pattern rules — not just generic secret detection, but specifically the patterns AI assistants produce when they're "helping" with authentication or system integration.</p>
+
+<h3>Docker &amp; Dockerfile</h3>
+
+<p><strong>VGL-D001</strong> — the original discovery — catches <code>"PORT:PORT"</code> bindings. <strong>VGL-D002</strong> catches hardcoded secrets in <code>environment:</code> blocks, correctly ignoring safe variable references like <code>${DB_PASSWORD}</code>. On the Dockerfile side: containers running as root, unpinned <code>:latest</code> base images, and secrets baked into image layers via <code>ENV</code> or <code>ARG</code>.</p>
+
+<h3>Shell Script Secret Leakage</h3>
+
+<p>A pattern that doesn't exist in any other scanner: deploy scripts that fetch a secret from a secrets manager into a shell variable (safe), then pass that variable inline on an SSH command string (not safe):</p>
+
+<pre><code># This exposes DB_URL in ps aux on both machines
+ssh host "DB_URL='$DB_URL' venv/bin/alembic upgrade head"
+</code></pre>
+
+<p><strong>VGL-S011</strong> catches this. The fix is having the remote script read from the secrets manager directly — no secret ever touches the command line.</p>
+
+<h3>AI Agent Patterns — The New Category</h3>
+
+<p>This is where it gets interesting. As AI coding assistants generate more agentic code, a new class of vulnerability emerges that no existing tool covers:</p>
+
+<ul>
+<li>LLM output piped directly to <code>subprocess.run()</code> or <code>os.system()</code> — CRITICAL</li>
+<li>Hardcoded <code>auto_approve = True</code> or <code>skip_confirmation = True</code> — HIGH</li>
+<li>Unbounded <code>while True</code> loops that call LLMs with no iteration cap — HIGH</li>
+<li>LLM response content written directly to the filesystem without validation — HIGH</li>
+</ul>
+
+<p>These are the "excessive agency" patterns. The AI is generating code that gives itself too much autonomy, and every existing scanner assumes a human is in the loop.</p>
+
+<h3>Prompt Injection in AI-Calling Code</h3>
+
+<ul>
+<li>User input embedded in system prompts — CRITICAL</li>
+<li>Raw <code>request.body</code> passed as LLM message content — HIGH</li>
+<li><code>str.format()</code> called on <code>system_prompt</code> variables with user-controlled data — HIGH</li>
+<li>Unsanitized tool output appended back to the conversation — MEDIUM</li>
+</ul>
+
+<h3>MCP Server Security</h3>
+
+<p>The Model Context Protocol is how AI agents extend their capabilities. Vigil catches tool poisoning via injected <code>description</code> strings, dynamic tool descriptions built from user-controlled data, and shell execution inside MCP handlers without a sandbox.</p>
+
+<h3>Infrastructure &amp; Dependencies</h3>
+
+<p>nginx missing security headers and deprecated TLS. Kubernetes <code>privileged: true</code> and host namespace sharing. IAM policy wildcards (<code>"Action": "*"</code>). Python CVEs via pip-audit and npm CVEs via npm audit — running immediately on every <code>requirements.txt</code> or <code>package.json</code> change, not on a weekly schedule. Trivy IaC deep scan for Dockerfile and Terraform.</p>
+
+<hr>
+
+<h2>The Competitive Gap</h2>
+
+<p>I tested the docker-compose port binding issue against every major IaC scanner before writing a single line of Vigil code.</p>
+
+<p><strong>Checkov:</strong> ❌ misses it. <strong>Trivy config scan:</strong> ❌ misses it. <strong>Semgrep:</strong> ❌ misses it. <strong>Snyk:</strong> ❌ misses it.</p>
+
+<p>All four tools parse docker-compose files. None catch <code>"PORT:PORT"</code>. All four run post-commit, not at generation time. None have rules for AI agent patterns, MCP security, or prompt injection in calling code.</p>
+
+<blockquote>The docker-compose port binding miss is the beachhead story. The deeper advantage is the category: <strong>at-generation security</strong>. No existing tool operates at this point in the development lifecycle because the lifecycle has changed.</blockquote>
+
+<hr>
+
+<h2>Per-Project Configuration</h2>
+
+<p>Real projects have legitimate reasons to disable specific rules. That's what <code>.vigilrc</code> is for:</p>
+
+<pre><code># .vigilrc — place in project root
+disabled_rules = ["VGL-T001"]     # skip trivy scan for this project
+min_severity   = "HIGH"           # only report HIGH and above
+exclude_paths  = ["vendor", "legacy"]
+telemetry      = false            # opt out of local telemetry
+</code></pre>
+
+<p>Vigil walks up the directory tree to find the nearest <code>.vigilrc</code>, so monorepos can have project-level overrides alongside a workspace-level default.</p>
+
+<p>For a line you've reviewed and accepted:</p>
+
+<pre><code>auto_approve = True  # vigil: ignore
+</code></pre>
+
+<p>Same pattern as <code># noqa</code> (flake8) and <code># nosec</code> (bandit). Familiar from day one.</p>
+
+<hr>
+
+<h2>Three Output Formats</h2>
+
+<p><strong>Terminal</strong> — colored, human-readable, fix suggestions inline:</p>
+
+<pre><code>CRITICAL [VGL-D001] docker-compose.yml:14
+  Port "5432:5432" binds to 0.0.0.0 — bypasses UFW
+  Fix: Use "127.0.0.1:5432:5432" to bind to localhost only.
+</code></pre>
+
+<p><strong>JSON</strong> — machine-readable, for integrations and dashboards.</p>
+
+<p><strong>SARIF 2.1.0</strong> — the standard for static analysis results. GitHub Advanced Security ingests SARIF directly and annotates PRs with inline findings. The groundwork for the GitHub Actions integration is already in the output layer.</p>
+
+<hr>
+
+<h2>Where It's Going</h2>
+
+<p><strong>Now:</strong> Claude Code PostToolUse hook — live, catching real issues daily.</p>
+
+<p><strong>Next:</strong> VS Code extension (<code>onDidSaveTextDocument</code> → <code>vigil scan</code> → inline Problem annotations). This reaches Copilot, Cursor, and Windsurf users. Same CLI, same rules, same exit codes. And a GitHub Actions integration — <code>vigil-action</code> scans changed files on every PR, posts SARIF to Advanced Security.</p>
+
+<p><strong>Later:</strong> Team dashboard — per-developer scan history, finding trends, which rules fire most. First paid tier.</p>
+
+<hr>
+
+<h2>Try It</h2>
+
+<pre><code>pip install vigilsec
+
+# Wire the Claude Code hook (one time)
+vigil init --global
+
+# Scan a file
+vigil scan docker-compose.yml
+
+# Scan a project
+vigil scan ./my-project/
+
+# SARIF output for GitHub Advanced Security
+vigil scan ./my-project/ --format sarif &gt; results.sarif
+</code></pre>
+
+<p>The Claude Code hook takes three seconds to install. After that, every file your AI writes gets scanned before it lands on disk. The first time it blocks something you didn't catch, you'll understand why this tool exists.</p>
+
+<hr>
+
+<h2>The Bigger Picture</h2>
+
+<p>Every major shift in how software is written creates a new attack surface that the tooling hasn't caught up with. The move to containers brought misconfigured Docker networking. The move to cloud brought over-permissioned IAM. The move to microservices brought insecure inter-service communication.</p>
+
+<p>The move to AI-generated code is bringing something new: <strong>patterns that are statistically common in training data but operationally dangerous in production</strong>. The <code>"PORT:PORT"</code> pattern is the clearest example, but it's not the last. AI models optimize for code that runs, not code that runs safely.</p>
+
+<p>The tooling for this shift doesn't exist yet. That's the gap. That's the product.</p>
+
+<hr>
+
+<p><em>Vigil is open-source (BUSL 1.1). Free to install, free to use, stdlib-only — no dependencies.</em></p>
+
+<p><em>Want early access to the VS Code extension and team features? <a href="https://thefwss.com/vigil">Join the waitlist</a>. Takes 60 seconds.</em></p>
+
+</body>
+</html>
