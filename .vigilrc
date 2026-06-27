@@ -1,4 +1,5 @@
 # Vigil config for the vigil project itself.
-# Exclude the rules/ directory — rule name strings match the injection/secret
-# patterns Vigil detects, causing false positives on the rule definitions.
-exclude_paths = ["rules", "fixtures"]
+# rules/   — rule name strings match the patterns Vigil detects (self-referential)
+# tests/   — test fixtures intentionally contain insecure code strings
+# plugin/  — manifest.json lists rule names, not executable code
+exclude_paths = ["rules", "fixtures", "tests", "plugin"]
