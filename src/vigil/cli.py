@@ -124,8 +124,12 @@ def main() -> None:
     engine = Engine(rules=rules, telemetry_enabled=config.telemetry)
 
     if path.is_file():
-        findings = engine.scan(path)
-        results = {path: findings} if findings else {}
+        # Honour exclude_paths for single-file scans too (same logic scan_dir uses)
+        if config.exclude_paths and any(part in config.exclude_paths for part in path.parts):
+            results = {}
+        else:
+            findings = engine.scan(path)
+            results = {path: findings} if findings else {}
     elif path.is_dir():
         results = engine.scan_dir(path, extra_skip=set(config.exclude_paths))
     else:
