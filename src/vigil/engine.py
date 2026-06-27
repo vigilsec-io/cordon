@@ -1,10 +1,12 @@
 from pathlib import Path
 from .rules import DEFAULT_RULES, Finding, Rule, Severity, SEVERITY_ORDER
+from . import telemetry as _telemetry
 
 
 class Engine:
-    def __init__(self, rules: list[Rule] | None = None) -> None:
+    def __init__(self, rules: list[Rule] | None = None, telemetry_enabled: bool = True) -> None:
         self.rules = rules if rules is not None else DEFAULT_RULES
+        self._telemetry = telemetry_enabled
 
     def scan(self, path: Path) -> list[Finding]:
         """Scan a single file. Returns findings sorted by severity (CRITICAL first).
@@ -30,7 +32,9 @@ class Engine:
                 ):
                     continue
                 findings.append(f)
-        return sorted(findings, key=lambda f: SEVERITY_ORDER[f.severity])
+        sorted_findings = sorted(findings, key=lambda f: SEVERITY_ORDER[f.severity])
+        _telemetry.record(sorted_findings, telemetry_enabled=self._telemetry)
+        return sorted_findings
 
     def scan_dir(
         self,

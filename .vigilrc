@@ -1,4 +1,4 @@
 # Vigil config for the vigil project itself.
-# Exclude the rules/ directory — rule name strings contain the exact patterns
-# Vigil scans for (eval(), shell=True, os.system()), causing false positives.
+# Exclude the rules/ directory — rule name strings match the injection/secret
+# patterns Vigil detects, causing false positives on the rule definitions.
 exclude_paths = ["rules", "fixtures"]
