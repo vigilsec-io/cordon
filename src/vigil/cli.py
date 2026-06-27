@@ -62,7 +62,7 @@ def _run_init(global_install: bool) -> None:
     post_tool_use: list = settings.setdefault("hooks", {}).setdefault("PostToolUse", [])
     for entry in post_tool_use:
         for h in entry.get("hooks", []):
-            if "vigil" in h.get("command", ""):
+            if Path(h.get("command", "")).name == hook_sh.name:
                 print(f"Vigil hook already installed in {settings_path}")
                 return
 
