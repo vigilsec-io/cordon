@@ -73,7 +73,7 @@ class EvalInjectionRule(_GrepRule):
     id = "VGL-I001"
     name = "eval() or exec() — code injection risk"
     severity = Severity.CRITICAL
-    pattern = r"""\b(eval|exec)\s*\("""
+    pattern = r"""(?<!\.)\b(eval|exec)\s*\("""
     fix = "Never call eval/exec on user-controlled input. Use ast.literal_eval for data, or a proper parser."
 
 
