@@ -42,7 +42,10 @@ class DockerPortExposureRule(Rule):
     _PATTERN = re.compile(r'"(\d+):(\d+)"')
 
     def applies_to(self, path: Path) -> bool:
-        return "docker-compose" in path.name and path.suffix in (".yml", ".yaml")
+        name = path.name
+        return (
+            "docker-compose" in name or name in ("compose.yml", "compose.yaml")
+        ) and path.suffix in (".yml", ".yaml")
 
     def check(self, path: Path) -> list[Finding]:
         try:
@@ -94,7 +97,10 @@ class DockerComposeEnvSecretRule(Rule):
     _MAP_PAT = re.compile(r"^(\w+)\s*:\s+(.+)")
 
     def applies_to(self, path: Path) -> bool:
-        return "docker-compose" in path.name and path.suffix in (".yml", ".yaml")
+        name = path.name
+        return (
+            "docker-compose" in name or name in ("compose.yml", "compose.yaml")
+        ) and path.suffix in (".yml", ".yaml")
 
     def check(self, path: Path) -> list[Finding]:
         try:
