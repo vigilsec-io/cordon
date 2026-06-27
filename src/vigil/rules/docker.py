@@ -15,6 +15,16 @@ def _is_var_ref(val: str) -> bool:
     return val.lstrip("\"'").startswith("$")
 
 
+def _is_file_secret_ref(name: str, val: str) -> bool:
+    """True if this is Docker's _FILE suffix pattern for file-based secrets.
+
+    The Docker convention: FOO_PASSWORD_FILE=/run/secrets/foo tells the container
+    to read the secret from a file rather than an env var — this is the *more*
+    secure approach and must never be flagged as a hardcoded secret.
+    """
+    return name.upper().endswith("_FILE") and val.startswith("/run/secrets/")
+
+
 class DockerPortExposureRule(Rule):
     """VGL-D001 — the unique rule no existing IaC tool catches.
 
