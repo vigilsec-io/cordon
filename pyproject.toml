@@ -3,11 +3,20 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "vigil"
+name = "vigilsec"
 version = "0.1.0"
 description = "AI coding security co-pilot — blocks insecure code at generation time"
+readme = "README.md"
+license = "BUSL-1.1"
+license-files = ["LICENSE"]
+authors = [{name = "Prem Kumar Akula", email = "prem.fwss@gmail.com"}]
 requires-python = ">=3.11"
 dependencies = []
+keywords = ["security", "devsecops", "docker", "ai", "claude", "static-analysis", "linter"]
+
+[project.urls]
+Homepage = "https://thefwss.com/vigil"
+Feedback = "https://thefwss.com/vigil"
 
 [project.scripts]
 vigil = "vigil.cli:main"
@@ -23,4 +32,5 @@ pythonpath = ["src"]
 exclude_dirs = ["tests", ".venv", "venv"]
 # B101: assert in tests; B404/B603/B607: vigil intentionally shells out to trivy/pip-audit/npm
 # with hardcoded command names and list-form args — no shell injection possible
-skips = ["B101", "B404", "B603", "B607"]
+# B110: bare except in telemetry.py is intentional — telemetry must never crash a scan
+skips = ["B101", "B404", "B603", "B607", "B110"]

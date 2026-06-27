@@ -28,7 +28,7 @@ The correct form is `"127.0.0.1:5432:5432"`. Vigil catches it. Nothing else does
 ## Install
 
 ```bash
-pip install vigil
+pip install vigilsec
 ```
 
 **Wire the Claude Code hook (one time):**
