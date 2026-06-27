@@ -265,6 +265,6 @@ pytest tests/ -v
 
 Found a false positive? Want a rule that doesn't exist yet? Building with AI agents and hitting patterns Vigil should catch?
 
-[Join the waitlist → form.typeform.com/to/AEs5yinT](https://form.typeform.com/to/AEs5yinT)
+[Join the waitlist → thefwss.com/vigil](https://thefwss.com/vigil)
 
 Or: `vigil feedback`

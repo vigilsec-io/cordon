@@ -108,7 +108,7 @@ def main() -> None:
         sys.exit(0)
 
     if args.command == "feedback":
-        url = "https://form.typeform.com/to/AEs5yinT"
+        url = "https://thefwss.com/vigil"
         print(f"Opening {url}")
         print("Or email: prem.fwss@gmail.com")
         webbrowser.open(url)
@@ -160,7 +160,7 @@ def main() -> None:
             _dim = "\033[2m" if not args.no_color else ""
             _rst = "\033[0m" if not args.no_color else ""
             print(
-                f"{_dim}── Vigil · feedback & waitlist → form.typeform.com/to/AEs5yinT ──{_rst}",
+                f"{_dim}── Vigil · feedback & waitlist → thefwss.com/vigil ──{_rst}",
                 file=sys.stderr,
             )
 
