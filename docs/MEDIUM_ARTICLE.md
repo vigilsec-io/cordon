@@ -99,31 +99,44 @@ The engine itself is stdlib-only Python — no dependencies, no pip install surp
 
 ## The Rule Corpus: What Vigil Catches
 
-In two weeks of development, Vigil now has 18 rules across six categories:
+In two weeks of development, Vigil now has 35 rules across nine categories:
 
-**Secrets & Injection** (7 rules)
-Hardcoded AWS keys, passwords, API tokens. `eval()` injection. `subprocess(shell=True)`. `os.system()`. These are the AI-pattern rules — not just generic secret detection, but specifically the patterns AI assistants produce when they're "helping" with authentication or system integration.
+**Secrets & Injection** (10 rules)
+Hardcoded AWS keys, passwords, API tokens, JWT secrets, PEM private keys, Stripe live keys, Slack tokens, credential-embedded database URLs, and provider keys (OpenAI, GitHub, GitLab, Google). `eval()` injection. `subprocess(shell=True)`. `os.system()`. AI assistants produce these when they're "helping" with authentication — Vigil catches them before the file saves.
 
 **Docker IaC** (2 rules)
-`VGL-D001` — the original discovery — catches `"PORT:PORT"` bindings in docker-compose. `VGL-D002` catches hardcoded secrets in `environment:` blocks, in both list style (`- DB_PASSWORD=secret`) and mapping style (`DB_PASSWORD: secret`), while correctly ignoring variable references (`${DB_PASSWORD}`).
+`VGL-D001` — the original discovery — catches `"PORT:PORT"` bindings in docker-compose. `VGL-D002` catches hardcoded secrets in `environment:` blocks, correctly ignoring safe variable references (`${DB_PASSWORD}`).
 
 **Dockerfile Hardening** (3 rules)
-Container running as root (no `USER` directive). Unpinned `:latest` base image. `ENV PASSWORD=secret` or `ARG TOKEN=default` — secrets baked into image layers that persist in history.
+Container running as root. Unpinned `:latest` base image. Secrets baked into image layers via `ENV PASSWORD=secret` or credential-embedded URLs in `ARG` values.
 
 **nginx Security** (1 rule)
 Missing `X-Frame-Options`, `X-Content-Type-Options`, `server_tokens off`. Deprecated TLS versions (TLSv1.0, TLSv1.1).
 
 **Kubernetes** (1 rule)
-`privileged: true` (full host kernel access — CRITICAL). `hostNetwork: true`, `hostPID: true`, `hostIPC: true` (host namespace sharing — HIGH). These are the patterns that keep appearing in AI-generated Kubernetes manifests because the examples in training data are often stripped-down demos, not production-hardened configurations.
+`privileged: true` (full host kernel access — CRITICAL). `hostNetwork`, `hostPID`, `hostIPC` (host namespace sharing — HIGH). AI-generated K8s manifests are often stripped-down demos — not production-hardened.
 
 **IAM Policies** (1 rule)
-`"Action": "*"` — grants every AWS permission. `"Resource": "*"` — applies to every resource. These wildcards appear constantly in AI-generated IAM policies because they "work" in development and the AI optimizes for correctness-in-the-moment, not least privilege.
+`"Action": "*"` and `"Resource": "*"`. Wildcards appear constantly in AI-generated IAM policies because they "work" in development. Vigil catches both inline and multi-line list formats.
+
+**AI Agent Patterns** (7 rules — the new category)
+This is where it gets interesting. As AI coding assistants generate more agentic code, a new class of vulnerability emerges. Vigil catches:
+- LLM output piped directly to `subprocess.run()` or `os.system()` (CRITICAL)
+- Hardcoded `auto_approve = True` or `skip_confirmation = True` (HIGH)
+- Unbounded `while True` loops that call LLMs with no iteration cap (HIGH)
+- LLM response content written directly to the filesystem without validation (HIGH)
+- User input embedded in system prompts — the classic prompt injection vector (CRITICAL)
+- Raw `request.body` passed as LLM message content (HIGH)
+- `str.format()` called on `system_prompt` variables with user-controlled data (HIGH)
+
+**MCP Server Security** (3 rules)
+The Model Context Protocol is how AI agents extend their capabilities. Vigil catches tool poisoning via injected `description` strings, dynamic tool descriptions built from user-controlled data, and shell execution inside MCP handlers without a sandbox.
 
 **Dependency CVEs** (2 rules)
 `pip-audit` and `npm audit` run immediately on every `requirements.txt` or `package.json` touch. Not on schedule. Not in CI. Right now.
 
 **Trivy IaC deep scan** (1 rule)
-Wraps Trivy's config scanner for Dockerfile and Terraform files, adding its broader CVE database on top of Vigil's own rules.
+Wraps Trivy's config scanner for Dockerfile and Terraform files.
 
 ---
 
@@ -137,7 +150,7 @@ I tested the docker-compose port binding issue against every major IaC scanner b
 | Trivy config | ❌ | ❌ post-commit | ❌ | ❌ |
 | Semgrep | ❌ | ❌ post-commit | ❌ | ❌ |
 | Snyk | ❌ | ❌ post-commit | ❌ | ❌ |
-| **Vigil** | **✅ VGL-D001** | **✅ PostToolUse** | **✅ 18 rules** | **✅** |
+| **Vigil** | **✅ VGL-D001** | **✅ PostToolUse** | **✅ 35 rules** | **✅** |
 
 The docker-compose port binding miss is the beachhead story. But the deeper advantage is the category: **at-generation security**. No existing tool operates at this point in the development lifecycle because the lifecycle has changed. AI coding assistants are new. The tooling hasn't caught up.
 
@@ -293,7 +306,7 @@ The tooling for this shift doesn't exist yet. That's the gap. That's the product
 
 *Vigil is open-source (BUSL 1.1). The rule corpus, CLI, and Claude Code plugin are free. If you're building with AI coding assistants and deploying infrastructure, install it before your next session.*
 
-*If you found this useful, follow for updates on the VS Code extension and PyPI release.*
+*If you want early access to the VS Code extension, PyPI release, and team features — [join the waitlist](https://form.typeform.com/to/AEs5yinT). Takes 60 seconds.*
 
 ---
 
