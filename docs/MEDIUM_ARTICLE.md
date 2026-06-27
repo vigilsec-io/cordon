@@ -306,7 +306,7 @@ The tooling for this shift doesn't exist yet. That's the gap. That's the product
 
 *Vigil is open-source (BUSL 1.1). The rule corpus, CLI, and Claude Code plugin are free. If you're building with AI coding assistants and deploying infrastructure, install it before your next session.*
 
-*If you want early access to the VS Code extension, PyPI release, and team features — [join the waitlist](https://form.typeform.com/to/AEs5yinT). Takes 60 seconds.*
+*If you want early access to the VS Code extension, PyPI release, and team features — [join the waitlist](https://thefwss.com/vigil). Takes 60 seconds.*
 
 ---
 
