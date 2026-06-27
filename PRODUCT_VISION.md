@@ -42,7 +42,7 @@ AI writes file → Vigil scans → CRITICAL/HIGH? → Block + show fix
 
 ---
 
-## Rule Catalog (15 rules — Phase 0 + Phase 1)
+## Rule Catalog (16 rules — Phase 0 + Phase 1 + Phase 2 in progress)
 
 | Rule ID | Severity | Phase | What it catches |
 |---|---|---|---|
@@ -54,6 +54,7 @@ AI writes file → Vigil scans → CRITICAL/HIGH? → Block + show fix
 | VGL-I002 | HIGH | 0 | `subprocess(shell=True)` |
 | VGL-I003 | HIGH | 0 | `os.system()` |
 | VGL-D001 | CRITICAL | 0 | **Docker `"PORT:PORT"` → 0.0.0.0 bypass** ← unique in market |
+| VGL-D002 | HIGH | 2 | docker-compose `environment:` hardcoded secrets (list + mapping style) |
 | VGL-DF001 | HIGH | 0 | Dockerfile running as root (no USER) |
 | VGL-DF002 | MEDIUM | 0 | Unpinned `:latest` base image |
 | VGL-DF003 | HIGH | 1 | `ENV PASSWORD=secret` / `ARG TOKEN=default` baked into image |
@@ -61,6 +62,8 @@ AI writes file → Vigil scans → CRITICAL/HIGH? → Block + show fix
 | VGL-T001 | HIGH | 1 | Trivy IaC deep scan — Dockerfile + Terraform misconfigs |
 | VGL-DEP001 | HIGH | 0 | Python CVEs via pip-audit |
 | VGL-DEP002 | HIGH | 0 | Critical npm CVEs via npm audit |
+| VGL-K001 | CRITICAL/HIGH | 2 | K8s `privileged: true`, `hostNetwork: true`, missing `readOnlyRootFilesystem` _(next)_ |
+| VGL-IAM001 | CRITICAL | 2 | IAM policy `"Action": "*"` / `"Resource": "*"` wildcards _(next)_ |
 
 ---
 
@@ -95,29 +98,30 @@ AI writes file → Vigil scans → CRITICAL/HIGH? → Block + show fix
 | `vigil init` command | ✅ | Auto-wires `.claude/settings.json`; `--global` flag |
 | Claude Code plugin manifest + install docs | ✅ | `plugin/manifest.json` + `plugin/README_INSTALL.md` |
 | 65 tests, all passing | ✅ | +34 tests from Phase 0 |
-| LICENSE + copyright headers | ⏳ | Next — required before any public release |
-| Publish to PyPI / Claude Code marketplace | ⏳ | After license file is added |
+| LICENSE + copyright headers | ✅ | BUSL 1.1 + AUTHORS + NOTICE added |
+| Publish to PyPI / Claude Code marketplace | ⏳ | After PyPI packaging pass |
 
-**Rule count:** 15 rules  
+**Rule count:** 16 rules (Phase 0+1 done, Phase 2 in progress)  
 **Success metric:** 100 Claude Code plugin installs; first "caught a real vuln in someone else's project" report  
 **Unlocks:** Free tier goes public; beachhead story is shareable.
 
 ---
 
-### Phase 2 — VS Code Extension + Config File Support
+### Phase 2 — VS Code Extension + Config File Support 🔄 In Progress
 **Goal:** Reach Copilot/Cursor/Windsurf users; add project-level rule configuration.
 
-| Deliverable | Notes |
-|---|---|
-| VS Code extension (`vigil-vscode`) | `onDidSaveTextDocument` → `vigil scan`; inline Problem annotations |
-| Cursor + Windsurf support | Both use VS Code extension API — same extension, no rewrite |
-| `.vigilrc` / `vigil.toml` config file | Per-project rule enable/disable, custom severity overrides, path excludes |
-| VGL-K001: K8s manifest security | `hostNetwork: true`, `privileged: true`, missing `readOnlyRootFilesystem` |
-| VGL-IAM001: IAM wildcard policy | `"Action": "*"` or `"Resource": "*"` in policy JSON |
-| Custom rule DSL | Users write rules in TOML — pattern + severity + fix message |
-| `--watch` mode | `vigil scan --watch <dir>` — inotify loop for non-hook editors |
+| Deliverable | Status | Notes |
+|---|---|---|
+| `.vigilrc` config file | ✅ | Ancestor walk, `disabled_rules`, `min_severity`, `exclude_paths`; 11 tests |
+| VGL-D002: compose env block secrets | ✅ | List + mapping style; variable refs skipped; HIGH; 8 tests |
+| VS Code extension (`vigil-vscode`) | ⏳ | `onDidSaveTextDocument` → `vigil scan`; inline Problem annotations |
+| Cursor + Windsurf support | ⏳ | Both use VS Code extension API — same extension, no rewrite |
+| VGL-K001: K8s manifest security | ⏳ | `hostNetwork: true`, `privileged: true`, missing `readOnlyRootFilesystem` |
+| VGL-IAM001: IAM wildcard policy | ⏳ | `"Action": "*"` or `"Resource": "*"` in policy JSON |
+| Custom rule DSL | ⏳ | Users write rules in TOML — pattern + severity + fix message |
+| `--watch` mode | ⏳ | `vigil scan --watch <dir>` — inotify loop for non-hook editors |
 
-**Rule count target:** 22 rules + unlimited custom  
+**Rule count target:** 18+ rules (targeting 22 + unlimited custom)  
 **Success metric:** VS Code extension 500 installs; 1 blog post / tweet with "Vigil caught X that Checkov missed"  
 **Unlocks:** Custom rule DSL is the foundation for the enterprise rule registry.
 

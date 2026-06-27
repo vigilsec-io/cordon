@@ -7,7 +7,7 @@
 
 ## Last Updated: 2026-06-26
 
-**Status:** Phase 1 in progress. 65/65 tests passing. 5 new rules + SARIF output + `vigil init` + plugin manifest done. Remaining Phase 1: push to Gitea, wire Claude Code hook.
+**Status:** Phase 2 partially complete. 84/84 tests passing. Gitea at 8aea5f4. `.vigilrc` config system + VGL-D002 pushed. Next: VGL-K001 (K8s) + VGL-IAM001 (IAM wildcards).
 
 ---
 
@@ -73,23 +73,37 @@ venv/bin/pytest tests/ -v
 
 ---
 
-## Next Steps — Phase 1 Remaining + Phase 2
+## Phase 2 — In Progress (2026-06-26)
 
-**Resume instruction:** Start with step 1.
+1. ✅ **`.vigilrc` config file** — `src/vigil/config.py`; `VigilConfig` dataclass; walks up to filesystem root; child precedence; invalid TOML safe-defaults; 11 tests
+2. ✅ **VGL-D002** — docker-compose `environment:` block hardcoded secrets; list + mapping style; variable refs skipped; HIGH severity; 8 tests
+3. ✅ **`engine.py`** — `scan_dir(extra_skip=)` param; merged with defaults
+4. ✅ **`cli.py`** — loads `.vigilrc`; filters disabled rules; `extra_skip`; `effective_sev` logic (--severity overrides min_severity)
+5. ✅ **16 rules total** — 84 tests, all passing; pushed to Gitea (8aea5f4)
 
-1. **Push Phase 1 to Gitea** — `git add -A && git commit && git push gitea main`
+---
 
-2. **Wire Claude Code hook** — run `vigil init --global` to activate for all projects
-   - Then verify: write an unsafe docker-compose.yml and confirm Claude Code blocks it
+## Next Steps — Phase 2 Remaining
 
-3. **Phase 2: `.vigilrc` config file** — allow per-project rule overrides
-   - Schema: `{ "disabled_rules": ["VGL-T001"], "min_severity": "HIGH" }`
-   - Loaded by Engine at startup if `.vigilrc` exists in project root or parents
+**Resume instruction:** Implement in order.
 
-4. **Phase 2: K8s/Helm YAML rule** (VGL-K001) — scan for `privileged: true`, `hostNetwork: true`, no resource limits
-   - `applies_to`: YAML files containing `apiVersion:` and `kind:` keys
+1. **VGL-K001: Kubernetes YAML security** — `src/vigil/rules/k8s.py`
+   - `applies_to`: YAML files with `apiVersion:` present on any line
+   - Checks: `privileged: true` (CRITICAL), `hostNetwork: true` (HIGH), `hostPID: true` (HIGH), missing `readOnlyRootFilesystem: true` on containers (MEDIUM)
+   - Parser: line-by-line regex (no YAML parse dep); `_in_containers_block` state flag
 
-5. **Phase 2: IAM policy rule** (VGL-IAM001) — scan for `"Action": "*"` or `"Resource": "*"` wildcards in policy JSON/YAML
+2. **VGL-IAM001: IAM wildcard policy** — `src/vigil/rules/iam.py`
+   - `applies_to`: JSON files with `"Statement"` key; YAML files with `Statement:` key; filenames matching `*policy*`, `*iam*`, `*trust*`
+   - Checks: `"Action": "*"` or `"Action": ["*"]` (CRITICAL); `"Resource": "*"` with non-wildcard Action (HIGH)
+   - Note: Avoid false-positives on `arn:aws:...` ARNs that happen to contain `*` wildcard prefixes
+
+3. **Update `__init__.py`** — add both new rules to DEFAULT_RULES
+
+4. **Add tests** — `tests/test_rules_k8s.py` (~9 tests) + `tests/test_rules_iam.py` (~9 tests)
+
+5. **Update PRODUCT_VISION.md** — rule count → 18; Phase 2 table check items
+
+6. **Push to Gitea** + update this file
 
 ---
 
@@ -98,8 +112,8 @@ venv/bin/pytest tests/ -v
 | Phase | Status | Details |
 |-------|--------|---------|
 | Phase 0 — Core engine | ✅ Complete | 12 rules, 31 tests, CLI, hook, Gitea |
-| Phase 1 — Rule expansion + Claude Code marketplace | ⏳ Next | VGL-T001, N001, DF003, SARIF, plugin manifest |
-| Phase 2 — VS Code extension + config | ⏳ Future | `.vigilrc`, custom rule DSL, K8s/IAM rules |
+| Phase 1 — Rule expansion + Claude Code marketplace | ✅ Complete | +3 rules (DF003/N001/T001), SARIF, plugin manifest, 65 tests |
+| Phase 2 — Config + new rules | 🔄 In progress | .vigilrc ✅, VGL-D002 ✅; VGL-K001 + VGL-IAM001 next |
 | Phase 3 — GitHub Actions + Team dashboard | ⏳ Future | **H1B gated** — build now, revenue after LLC |
 | Phase 4 — Enterprise + JetBrains | ⏳ Future | SOC2, SIEM, on-prem |
 
