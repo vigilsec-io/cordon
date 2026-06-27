@@ -121,7 +121,7 @@ def main() -> None:
     path = args.path.resolve()
     config = load_config(path)
     rules = [r for r in DEFAULT_RULES if r.id not in config.disabled_rules]
-    engine = Engine(rules=rules)
+    engine = Engine(rules=rules, telemetry_enabled=config.telemetry)
 
     if path.is_file():
         findings = engine.scan(path)

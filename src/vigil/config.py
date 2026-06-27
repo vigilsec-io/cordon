@@ -9,6 +9,7 @@ class VigilConfig:
     disabled_rules: list[str] = field(default_factory=list)
     min_severity: str | None = None
     exclude_paths: list[str] = field(default_factory=list)
+    telemetry: bool = True
 
 
 def load_config(start: Path) -> VigilConfig:
@@ -30,6 +31,7 @@ def load_config(start: Path) -> VigilConfig:
                 disabled_rules=data.get("disabled_rules", []),
                 min_severity=data.get("min_severity"),
                 exclude_paths=data.get("exclude_paths", []),
+                telemetry=data.get("telemetry", True),
             )
         parent = current.parent
         if parent == current:
