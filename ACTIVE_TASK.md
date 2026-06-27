@@ -5,9 +5,9 @@
 
 ---
 
-## Last Updated: 2026-06-26
+## Last Updated: 2026-06-27
 
-**Status:** Phase 2 core rules complete. 102/102 tests passing. Gitea at d915bc8. 18 rules: .vigilrc + VGL-D002 + VGL-K001 + VGL-IAM001. Next: VS Code extension scaffold.
+**Status:** Phase 2 core rules complete. 102/102 tests passing. Gitea at d8a0713 (VGL-I001 false positive fix — model.eval() excluded via negative lookbehind). Shield-ecosystem: 0 Vigil findings. Vigil hook wired in ~/.claude/settings.json. Next: VS Code extension scaffold.
 
 ---
 
