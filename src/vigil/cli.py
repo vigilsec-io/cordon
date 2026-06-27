@@ -1,5 +1,6 @@
 """vigil scan <file|dir> [--format terminal|json|sarif] [--severity CRITICAL|HIGH|...]
 vigil init [--global]
+vigil feedback
 
 Exit codes (scan):
   0 — no findings
@@ -9,6 +10,7 @@ Exit codes (scan):
 import argparse
 import json as _json
 import sys
+import webbrowser
 from pathlib import Path
 
 from .config import load_config
@@ -37,6 +39,11 @@ def _run_init(global_install: bool) -> None:
             file=sys.stderr,
         )
         sys.exit(1)
+
+    # Ensure hook.sh is executable — git clones and zip downloads often strip the bit
+    if not hook_sh.stat().st_mode & 0o111:
+        hook_sh.chmod(hook_sh.stat().st_mode | 0o755)
+        print(f"Fixed execute permission on {hook_sh.name}")
 
     settings_path = (
         Path.home() / ".claude" / "settings.json"
@@ -93,10 +100,19 @@ def main() -> None:
         help="Install into ~/.claude/settings.json (user-wide) instead of ./.claude/settings.json",
     )
 
+    sub.add_parser("feedback", help="Open the Vigil feedback & waitlist page")
+
     args = parser.parse_args()
     if args.command is None:
         parser.print_help()
         sys.exit(0)
+
+    if args.command == "feedback":
+        url = "https://thefwss.com/vigil"
+        print(f"Opening {url}")
+        print("Or email: prem.fwss@gmail.com")
+        webbrowser.open(url)
+        return
 
     if args.command == "init":
         _run_init(args.global_install)
@@ -136,6 +152,13 @@ def main() -> None:
     else:
         for _path, file_findings in results.items():
             report_terminal(file_findings, use_color=not args.no_color)
+        if all_findings:
+            _dim = "\033[2m" if not args.no_color else ""
+            _rst = "\033[0m" if not args.no_color else ""
+            print(
+                f"{_dim}── Vigil · feedback & waitlist: thefwss.com/vigil ──{_rst}",
+                file=sys.stderr,
+            )
 
     if engine.blocking(all_findings):
         sys.exit(2)
