@@ -249,6 +249,27 @@ Then add it to `DEFAULT_RULES` in `src/vigil/rules/__init__.py`. Write tests. Do
 
 ---
 
+## GitHub Actions
+
+Add Vigil to any CI pipeline — copy `vigil-action/workflow-template.yml` into your project's `.github/workflows/vigil.yml`:
+
+```yaml
+- name: Install Vigil
+  run: pip install vigilsec --quiet
+
+- name: Scan with Vigil
+  run: vigil scan . --no-color
+
+- name: Upload SARIF to GitHub Code Scanning
+  uses: github/codeql-action/upload-sarif@v3
+  with:
+    sarif_file: vigil-results.sarif
+```
+
+Findings appear as inline annotations on PR diffs in the GitHub Security tab.
+
+---
+
 ## Development
 
 ```bash
