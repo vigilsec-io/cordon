@@ -2,7 +2,7 @@
   "name": "vigil-security",
   "displayName": "Vigil Security",
   "description": "AI coding security co-pilot — blocks insecure code at generation time. Catches docker-compose port exposure, secrets, AI agent patterns, and more.",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "publisher": "vigilsec",
   "license": "BUSL-1.1",
   "engines": {
