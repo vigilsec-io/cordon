@@ -44,7 +44,7 @@ class DockerfileEnvSecretRule(Rule):
                     file_path=path,
                     line=i,
                     snippet=stripped[:120],
-                    fix="Never bake DB URLs with credentials into images. Inject at runtime from SSM.",
+                    fix="Never bake DB URLs with credentials into images. Inject at runtime via environment variables from a secrets manager (AWS SSM, Azure Key Vault, GCP Secret Manager, HashiCorp Vault, Doppler).",
                 ))
                 continue
             # Name-based: secret key name with any value
@@ -58,7 +58,7 @@ class DockerfileEnvSecretRule(Rule):
                 file_path=path,
                 line=i,
                 snippet=stripped[:120],
-                fix="Inject at runtime via SSM or Docker secrets — never bake into image layers",
+                fix="Inject at runtime via environment variables or Docker secrets — never bake into image layers. Use a secrets manager (AWS SSM, Azure Key Vault, GCP Secret Manager, HashiCorp Vault, Doppler).",
             ))
         return findings
 
