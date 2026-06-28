@@ -113,12 +113,28 @@ class PemPrivateKeyRule(_GrepRule):
     fix = "Never commit private keys. Move to SSM SecureString or a secrets vault and rotate immediately."
 
 
+# Security tool config files inherently contain credential-like patterns as
+# suppression regexes — do not flag them as actual embedded credentials.
+_SECURITY_TOOL_CONFIGS = {
+    ".trufflehog.toml", ".gitleaksignore", ".secrets.baseline",
+    ".trufflehog.yml", ".trufflehog.yaml",
+}
+
+
 class CredentialUrlRule(_GrepRule):
     id = "VGL-S007"
     name = "Database URL with embedded credentials"
     severity = Severity.CRITICAL
     pattern = r"(?i)(postgres|postgresql|mysql|mongodb(\+srv)?|redis|amqp|mssql)://[^:@\s]+:[^@\s]+@"
     fix = "Extract credentials from the URL. Read user/password from SSM and construct the URL at runtime."
+
+    def applies_to(self, path: Path) -> bool:
+        return super().applies_to(path) and path.name not in _SECURITY_TOOL_CONFIGS
+
+    def check(self, path: Path) -> list[Finding]:
+        if path.name in _SECURITY_TOOL_CONFIGS:
+            return []
+        return super().check(path)
 
 
 class StripeLiveKeyRule(_GrepRule):

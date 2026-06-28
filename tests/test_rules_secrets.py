@@ -2,7 +2,7 @@ import pytest
 from pathlib import Path
 from vigil.rules.secrets import (
     AwsAccessKeyRule, HardcodedPasswordRule, HardcodedApiKeyRule,
-    EvalInjectionRule, ShellTrueRule, OsSystemRule,
+    EvalInjectionRule, ShellTrueRule, OsSystemRule, CredentialUrlRule,
 )
 from vigil.rules.base import Severity
 
@@ -93,3 +93,27 @@ def test_does_not_apply_to_image(tmp_path):
     f = tmp_path / "photo.png"
     f.write_text("")
     assert AwsAccessKeyRule().applies_to(f) is False
+
+
+def test_credential_url_detected_in_code(tmp_path):
+    f = tmp_path / "config.py"
+    f.write_text('DB_URL = "postgresql://admin:s3cr3t@prod-db:5432/mydb"\n')
+    findings = CredentialUrlRule().check(f)
+    assert len(findings) == 1
+    assert findings[0].severity == Severity.CRITICAL
+
+
+def test_credential_url_not_flagged_in_trufflehog_config(tmp_path):
+    """Regression: VGL-S007 must skip .trufflehog.toml — suppression files
+    intentionally contain credential-like patterns as detection regexes."""
+    f = tmp_path / ".trufflehog.toml"
+    f.write_text("regex = '''postgresql://user:pass@host'''\n")
+    assert CredentialUrlRule().check(f) == []
+    assert CredentialUrlRule().applies_to(f) is False
+
+
+def test_credential_url_not_flagged_in_gitleaksignore(tmp_path):
+    """gitleaksignore has no recognised text extension — engine skips it entirely."""
+    f = tmp_path / ".gitleaksignore"
+    f.write_text("postgresql://user:pass@host:5432/db\n")
+    assert CredentialUrlRule().applies_to(f) is False
