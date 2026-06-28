@@ -42,7 +42,7 @@ class AwsAccessKeyRule(_GrepRule):
     name = "AWS access key hardcoded"
     severity = Severity.CRITICAL
     pattern = r"AKIA[0-9A-Z]{16}"
-    fix = "Move to AWS SSM SecureString. Rotate this key immediately at AWS IAM console."
+    fix = "Rotate this key immediately at console.aws.amazon.com/iam. Move to a secrets manager (AWS SSM, Azure Key Vault, GCP Secret Manager, HashiCorp Vault, Doppler) and inject via environment variable at runtime."
 
 
 class HardcodedPasswordRule(_GrepRule):
@@ -50,7 +50,7 @@ class HardcodedPasswordRule(_GrepRule):
     name = "Hardcoded password"
     severity = Severity.CRITICAL
     pattern = r"""(?i)(password|passwd|pwd)\s*=\s*["'][^"']{6,}["']"""
-    fix = "Move to SSM or environment variable injected at runtime. Never commit credentials."
+    fix = "Move to a secrets manager (AWS SSM, Azure Key Vault, GCP Secret Manager, HashiCorp Vault, Doppler) or inject via environment variable at runtime. Never commit credentials."
 
 
 class HardcodedApiKeyRule(_GrepRule):
@@ -58,7 +58,7 @@ class HardcodedApiKeyRule(_GrepRule):
     name = "Hardcoded API key"
     severity = Severity.CRITICAL
     pattern = r"""(?i)(api_key|apikey)\s*=\s*["'][^"']{10,}["']"""
-    fix = "Move to SSM Parameter Store. Read via os.environ or boto3 at runtime."
+    fix = "Move to a secrets manager (AWS SSM, Azure Key Vault, GCP Secret Manager, HashiCorp Vault, Doppler). Read via os.environ at runtime — never hardcode in source."
 
 
 class HardcodedTokenRule(_GrepRule):
@@ -66,7 +66,7 @@ class HardcodedTokenRule(_GrepRule):
     name = "Hardcoded bearer token"
     severity = Severity.CRITICAL
     pattern = r"""(?i)(bot_token|access_token|refresh_token)\s*=\s*["'][^"']{20,}["']"""
-    fix = "Move to SSM SecureString. Rotate the token immediately."
+    fix = "Rotate this token immediately. Move to a secrets manager (AWS SSM, Azure Key Vault, GCP Secret Manager, HashiCorp Vault, Doppler) and inject via environment variable at runtime."
 
 
 class EvalInjectionRule(_GrepRule):
@@ -102,7 +102,7 @@ class JwtSecretRule(_GrepRule):
     name = "Hardcoded JWT secret"
     severity = Severity.CRITICAL
     pattern = r"""(?i)(jwt_secret|jwt_key|secret_key)\s*=\s*["'][^"']{8,}["']"""
-    fix = "Move JWT secret to SSM SecureString. Rotate the signing key immediately."
+    fix = "Rotate the signing key immediately. Move JWT secret to a secrets manager (AWS SSM, Azure Key Vault, GCP Secret Manager, HashiCorp Vault, Doppler) and read via environment variable at runtime."
 
 
 class PemPrivateKeyRule(_GrepRule):
@@ -110,7 +110,7 @@ class PemPrivateKeyRule(_GrepRule):
     name = "PEM private key in source"
     severity = Severity.CRITICAL
     pattern = r"-----BEGIN (RSA |EC |DSA |OPENSSH )?PRIVATE KEY-----"
-    fix = "Never commit private keys. Move to SSM SecureString or a secrets vault and rotate immediately."
+    fix = "Never commit private keys. Rotate immediately. Store in a secrets manager (AWS SSM, Azure Key Vault, GCP Secret Manager, HashiCorp Vault) or a dedicated key store (AWS KMS, Azure Key Vault HSM)."
 
 
 # Security tool config files inherently contain credential-like patterns as
@@ -126,7 +126,7 @@ class CredentialUrlRule(_GrepRule):
     name = "Database URL with embedded credentials"
     severity = Severity.CRITICAL
     pattern = r"(?i)(postgres|postgresql|mysql|mongodb(\+srv)?|redis|amqp|mssql)://[^:@\s]+:[^@\s]+@"
-    fix = "Extract credentials from the URL. Read user/password from SSM and construct the URL at runtime."
+    fix = "Extract credentials from the URL. Read user/password from a secrets manager (AWS SSM, Azure Key Vault, GCP Secret Manager, HashiCorp Vault) and construct the URL at runtime."
 
     def applies_to(self, path: Path) -> bool:
         return super().applies_to(path) and path.name not in _SECURITY_TOOL_CONFIGS
@@ -142,7 +142,7 @@ class StripeLiveKeyRule(_GrepRule):
     name = "Stripe live secret key"
     severity = Severity.CRITICAL
     pattern = r"sk_live_[0-9a-zA-Z]{24,}"
-    fix = "Rotate at dashboard.stripe.com immediately. Move to SSM SecureString."
+    fix = "Rotate at dashboard.stripe.com immediately. Move to a secrets manager (AWS SSM, Azure Key Vault, GCP Secret Manager, HashiCorp Vault, Doppler) and inject via environment variable."
 
 
 class SlackTokenRule(_GrepRule):
@@ -150,7 +150,7 @@ class SlackTokenRule(_GrepRule):
     name = "Slack token hardcoded"
     severity = Severity.CRITICAL
     pattern = r"xox[bpears]-[0-9A-Za-z]{10,}-[0-9A-Za-z\-]+"
-    fix = "Rotate at api.slack.com/apps. Move to SSM SecureString."
+    fix = "Rotate at api.slack.com/apps immediately. Move to a secrets manager (AWS SSM, Azure Key Vault, GCP Secret Manager, HashiCorp Vault, Doppler) and inject via environment variable."
 
 
 class GenericProviderKeyRule(_GrepRule):
@@ -158,4 +158,4 @@ class GenericProviderKeyRule(_GrepRule):
     name = "Provider API key hardcoded (OpenAI / GitHub / GitLab / Google)"
     severity = Severity.CRITICAL
     pattern = r"(?:sk-[a-zA-Z0-9]{20,}|gh[ps]_[a-zA-Z0-9]{36,}|glpat-[a-zA-Z0-9_\-]{20,}|AIza[0-9A-Za-z\-_]{35})"
-    fix = "Rotate this key at the provider's console immediately. Move to SSM SecureString."
+    fix = "Rotate this key at the provider's console immediately. Move to a secrets manager (AWS SSM, Azure Key Vault, GCP Secret Manager, HashiCorp Vault, Doppler) and inject via environment variable."
