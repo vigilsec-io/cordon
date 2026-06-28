@@ -17,6 +17,7 @@ from .config import load_config
 from .engine import Engine
 from .reporter import report_terminal, report_json, report_sarif
 from .rules import DEFAULT_RULES, Severity, SEVERITY_ORDER
+from .triage import run_triage
 
 
 def _find_hook_sh() -> Path | None:
