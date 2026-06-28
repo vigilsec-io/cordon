@@ -33,6 +33,8 @@ from .shell import ShellSecretInjectionRule
 from .web import SsrfRule, SqlInjectionFstringRule, SqlOrmRawRule, CorsWildcardRule, SslVerifyDisabledRule
 from .crypto import WeakRandomnessRule
 from .packages import PackageAuditRule
+from .terraform import TerraformHardcodedSecretRule, TerraformPublicAccessRule, TerraformEncryptionDisabledRule
+from .github_actions import GhActionsSecretInRunRule, GhActionsExcessivePermissionsRule, GhActionsUnpinnedActionRule
 
 DEFAULT_RULES: list[Rule] = [
     # Secrets — hardcoded credentials
@@ -94,6 +96,14 @@ DEFAULT_RULES: list[Rule] = [
     WeakRandomnessRule(),
     # Package audit — CVE, hallucination, staleness, supply chain
     PackageAuditRule(),
+    # Terraform IaC security
+    TerraformHardcodedSecretRule(),
+    TerraformPublicAccessRule(),
+    TerraformEncryptionDisabledRule(),
+    # GitHub Actions security
+    GhActionsSecretInRunRule(),
+    GhActionsExcessivePermissionsRule(),
+    GhActionsUnpinnedActionRule(),
 ]
 
 __all__ = [
