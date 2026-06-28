@@ -33,7 +33,7 @@ class _GrepRule(Rule):
                 fix=self.fix,
             )
             for i, line in enumerate(lines, 1)
-            if rx.search(line)
+            if rx.search(line) and not line.lstrip().startswith("#")
         ]
 
 
