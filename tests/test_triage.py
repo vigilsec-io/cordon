@@ -28,10 +28,10 @@ from vigil.triage import run_triage, _match_fp, _SECTION
     ("Alchemy: AuKGH9c4SgfiOEJUt5vjkzSEzzscMHkM", True, "SQLAlchemy"),
     # Xcode gestalt API
     ("Box: gestaltMacOSCompatibilityBoxless", True, "Xcode system API"),
-    # urllib3 test fixture
-    ("URI: https://username:password@host.com:80/path", True, "urllib3"),
-    # alembic template
-    ("Postgres: postgresql://user:pass@host/mydb", True, "Alembic"),
+    # urllib3 test fixture — matched by Proxy template URL pattern
+    ("URI: https://username:password@host.com:80/path", True, "Proxy template URL"),
+    # alembic template — matched by Template DB URL pattern
+    ("Postgres: postgresql://user:pass@host/mydb", True, "Template DB URL"),
     # Real findings — must NOT match
     ("Anthropic: sk-ant-api03-[REDACTED]", False, ""),
     ("AWS: AKIA[REDACTED]", False, ""),
