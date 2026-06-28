@@ -175,6 +175,19 @@ def main() -> None:
         help="Install into ~/.claude/settings.json (user-wide) instead of ./.claude/settings.json",
     )
 
+    triage_p = sub.add_parser(
+        "triage",
+        help="Auto-resolve known false positives in WORKSPACE_IMPROVEMENTS.md",
+    )
+    triage_p.add_argument(
+        "--workspace", type=Path, default=None, metavar="PATH",
+        help="Path to WORKSPACE_IMPROVEMENTS.md (auto-detected from cwd by default)",
+    )
+    triage_p.add_argument(
+        "--dry-run", action="store_true",
+        help="Print what would change without writing",
+    )
+
     sub.add_parser("feedback", help="Open the Vigil feedback & waitlist page")
     sub.add_parser("stats", help="Show local scan statistics from ~/.vigil/events.jsonl")
 
