@@ -211,6 +211,9 @@ def main() -> None:
         _run_init(args.global_install)
         return
 
+    if args.command == "triage":
+        sys.exit(run_triage(args.workspace, dry_run=args.dry_run))
+
     path = args.path.resolve()
     config = load_config(path)
     rules = [r for r in DEFAULT_RULES if r.id not in config.disabled_rules]
