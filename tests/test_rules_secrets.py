@@ -47,6 +47,22 @@ def test_shell_true_detected(tmp_path):
     assert findings[0].severity == Severity.HIGH
 
 
+def test_shell_true_in_docstring_not_flagged(tmp_path):
+    """Regression: 'subprocess shell=True' in a docstring should not fire VGL-I002."""
+    f = tmp_path / "agent.py"
+    f.write_text(
+        '"""\nCovers the gap no other tool fills: subprocess shell=True, and known dep CVEs.\n"""\n'
+    )
+    assert ShellTrueRule().check(f) == []
+
+
+def test_shell_true_in_comment_not_flagged(tmp_path):
+    """Comment-only lines should not trigger VGL-I002."""
+    f = tmp_path / "util.py"
+    f.write_text("# subprocess.run(cmd, shell=True) — do not use this pattern\n")
+    assert ShellTrueRule().check(f) == []
+
+
 def test_os_system_detected(tmp_path):
     f = tmp_path / "util.py"
     f.write_text("os.system('ls')\n")
