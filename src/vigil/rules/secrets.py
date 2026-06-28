@@ -81,7 +81,9 @@ class ShellTrueRule(_GrepRule):
     id = "VGL-I002"
     name = "subprocess with shell=True"
     severity = Severity.HIGH
-    pattern = r"""subprocess.*shell\s*=\s*True"""
+    # Require ( or , before shell=True — excludes natural-language descriptions in docstrings
+    # e.g. "subprocess shell=True" in a docstring won't match; subprocess.run(cmd, shell=True) will
+    pattern = r"""subprocess[^#\n]*[,(]\s*shell\s*=\s*True"""
     fix = "Use shell=False and pass arguments as a list: subprocess.run(['cmd', 'arg'], shell=False)"
 
 
