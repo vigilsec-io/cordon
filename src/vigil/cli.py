@@ -75,6 +75,80 @@ def _run_init(global_install: bool) -> None:
     print("Reload Claude Code to activate.")
 
 
+def _run_stats() -> None:
+    from pathlib import Path as _Path
+    import json as _json
+    from collections import Counter
+
+    events_file = _Path.home() / ".vigil" / "events.jsonl"
+
+    if not events_file.exists():
+        print("No scan data yet. Run vigil scan on a file to start collecting stats.")
+        print("Opt-out: set VIGIL_NO_TELEMETRY=1 or telemetry=false in .vigilrc")
+        return
+
+    events: list[dict] = []
+    with events_file.open() as fh:
+        for line in fh:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                events.append(_json.loads(line))
+            except _json.JSONDecodeError:
+                continue
+
+    if not events:
+        print("No scan data yet.")
+        return
+
+    total = len(events)
+    by_rule: Counter = Counter(e["rule_id"] for e in events)
+    by_severity: Counter = Counter(e.get("severity", "?") for e in events)
+    by_ext: Counter = Counter(e.get("file_ext", "") or "no ext" for e in events)
+    timestamps = sorted(e["ts"] for e in events if e.get("ts"))
+    first_scan = timestamps[0][:10] if timestamps else "—"
+    last_scan  = timestamps[-1][:10] if timestamps else "—"
+
+    _B = "\033[1m"
+    _R = "\033[0m"
+    _D = "\033[2m"
+    _SEV_COLOR = {
+        "CRITICAL": "\033[91m", "HIGH": "\033[93m",
+        "MEDIUM": "\033[94m", "LOW": "\033[96m", "INFO": "\033[37m",
+    }
+
+    def _sev(s: str) -> str:
+        return f"{_SEV_COLOR.get(s, '')}{s}{_R}"
+
+    print(f"\n{_B}Vigil — local scan stats{_R}")
+    print("─" * 44)
+    print(f"  {_B}Total findings recorded{_R}   {total}")
+    print(f"  {_D}First scan{_R}  {first_scan}  {_D}·  Last scan{_R}  {last_scan}")
+
+    print(f"\n  {_B}Top rules{_R}")
+    print(f"  {'─' * 42}")
+    for rule_id, count in by_rule.most_common(10):
+        bar = "█" * min(count, 20)
+        pct = int(count / total * 100)
+        print(f"  {rule_id:<12}  {bar:<20}  {count:>4}  ({pct:>2}%)")
+
+    print(f"\n  {_B}By severity{_R}")
+    print(f"  {'─' * 42}")
+    for sev in ["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO"]:
+        count = by_severity.get(sev, 0)
+        if count:
+            pct = int(count / total * 100)
+            print(f"  {_sev(sev):<22}  {count:>4}  ({pct:>2}%)")
+
+    print(f"\n  {_B}By file type{_R}")
+    print(f"  {'─' * 42}")
+    for ext, count in by_ext.most_common(8):
+        print(f"  {ext:<14}  {count:>4}")
+
+    print(f"\n{_D}Stats are local-only · stored at ~/.vigil/events.jsonl{_R}\n")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         prog="vigil",
@@ -101,6 +175,7 @@ def main() -> None:
     )
 
     sub.add_parser("feedback", help="Open the Vigil feedback & waitlist page")
+    sub.add_parser("stats", help="Show local scan statistics from ~/.vigil/events.jsonl")
 
     args = parser.parse_args()
     if args.command is None:
@@ -112,6 +187,10 @@ def main() -> None:
         print(f"Opening {url}")
         print("Or email: prem.fwss@gmail.com")
         webbrowser.open(url)
+        return
+
+    if args.command == "stats":
+        _run_stats()
         return
 
     if args.command == "init":
