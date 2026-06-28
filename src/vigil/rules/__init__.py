@@ -35,6 +35,10 @@ from .crypto import WeakRandomnessRule
 from .packages import PackageAuditRule
 from .terraform import TerraformHardcodedSecretRule, TerraformPublicAccessRule, TerraformEncryptionDisabledRule
 from .github_actions import GhActionsSecretInRunRule, GhActionsExcessivePermissionsRule, GhActionsUnpinnedActionRule
+from .xss import XssRule
+from .auth import JwtAlgorithmNoneRule, JwtVerifyDisabledRule, WeakSecretKeyRule, DebugModeEnabledRule
+from .rls import RlsDisabledRule, MissingTenantFilterRule
+from .logging_secrets import LoggingSecretsRule
 
 DEFAULT_RULES: list[Rule] = [
     # Secrets — hardcoded credentials
@@ -104,6 +108,18 @@ DEFAULT_RULES: list[Rule] = [
     GhActionsSecretInRunRule(),
     GhActionsExcessivePermissionsRule(),
     GhActionsUnpinnedActionRule(),
+    # Cross-Site Scripting
+    XssRule(),
+    # Broken authentication
+    JwtAlgorithmNoneRule(),
+    JwtVerifyDisabledRule(),
+    WeakSecretKeyRule(),
+    DebugModeEnabledRule(),
+    # Row-Level Security / data isolation
+    RlsDisabledRule(),
+    MissingTenantFilterRule(),
+    # Sensitive data in logs
+    LoggingSecretsRule(),
 ]
 
 __all__ = [
