@@ -17,7 +17,6 @@ from .config import load_config
 from .engine import Engine
 from .reporter import report_terminal, report_json, report_sarif
 from .rules import DEFAULT_RULES, Severity, SEVERITY_ORDER
-from .triage import run_triage
 
 
 def _find_hook_sh() -> Path | None:
@@ -175,19 +174,6 @@ def main() -> None:
         help="Install into ~/.claude/settings.json (user-wide) instead of ./.claude/settings.json",
     )
 
-    triage_p = sub.add_parser(
-        "triage",
-        help="Auto-resolve known false positives in WORKSPACE_IMPROVEMENTS.md",
-    )
-    triage_p.add_argument(
-        "--workspace", type=Path, default=None, metavar="PATH",
-        help="Path to WORKSPACE_IMPROVEMENTS.md (auto-detected from cwd by default)",
-    )
-    triage_p.add_argument(
-        "--dry-run", action="store_true",
-        help="Print what would change without writing",
-    )
-
     sub.add_parser("feedback", help="Open the Vigil feedback & waitlist page")
     sub.add_parser("stats", help="Show local scan statistics from ~/.vigil/events.jsonl")
 
@@ -210,9 +196,6 @@ def main() -> None:
     if args.command == "init":
         _run_init(args.global_install)
         return
-
-    if args.command == "triage":
-        sys.exit(run_triage(args.workspace, dry_run=args.dry_run))
 
     path = args.path.resolve()
     config = load_config(path)
