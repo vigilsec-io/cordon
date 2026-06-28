@@ -75,7 +75,7 @@ vigil feedback
 
 ## Rules
 
-35 rules across 9 categories. All built-in, stdlib-only, zero runtime dependencies.
+36 rules across 9 categories. All built-in, stdlib-only, zero runtime dependencies.
 
 ### Secrets & Injection (10 rules)
 
