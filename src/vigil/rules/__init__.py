@@ -30,6 +30,9 @@ from .prompt_injection import (
     UnsanitizedToolOutputRule,
 )
 from .shell import ShellSecretInjectionRule
+from .web import SsrfRule, SqlInjectionFstringRule, SqlOrmRawRule, CorsWildcardRule, SslVerifyDisabledRule
+from .crypto import WeakRandomnessRule
+from .packages import PackageAuditRule
 
 DEFAULT_RULES: list[Rule] = [
     # Secrets — hardcoded credentials
@@ -81,6 +84,16 @@ DEFAULT_RULES: list[Rule] = [
     UnsanitizedToolOutputRule(),
     # Shell script secret leakage
     ShellSecretInjectionRule(),
+    # Web security — SSRF, SQL injection, CORS, SSL
+    SsrfRule(),
+    SqlInjectionFstringRule(),
+    SqlOrmRawRule(),
+    CorsWildcardRule(),
+    SslVerifyDisabledRule(),
+    # Cryptographic weaknesses
+    WeakRandomnessRule(),
+    # Package audit — CVE, hallucination, staleness, supply chain
+    PackageAuditRule(),
 ]
 
 __all__ = [
