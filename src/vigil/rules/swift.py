@@ -70,6 +70,10 @@ class SwiftHardcodedSecretRule(Rule):
             val_str = val_m.group(1) if val_m else ""
             if "cache" in var_name.lower() or "cache" in val_str.lower():
                 continue
+            # FP guard 3: snake_case values are storage key identifiers, not secrets
+            # Real secrets have mixed case, hyphens, or special chars — never pure snake_case
+            if "_" in val_str and re.fullmatch(r"[a-z][a-z0-9_]*", val_str):
+                continue
             findings.append(Finding(
                 rule_id=self.id,
                 severity=self.severity,
