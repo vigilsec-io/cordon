@@ -38,6 +38,7 @@
     {"id": "VGL-N001",   "severity": "HIGH",     "name": "nginx missing security headers or weak TLS"},
     {"id": "VGL-T001",   "severity": "HIGH",     "name": "Trivy IaC deep scan — Dockerfile/Terraform"},
     {"id": "VGL-DEP001", "severity": "HIGH",     "name": "pip-audit CVE findings"},
-    {"id": "VGL-DEP002", "severity": "HIGH",     "name": "npm audit CVE findings"}
+    {"id": "VGL-DEP002", "severity": "HIGH",     "name": "npm audit CVE findings"},
+    {"id": "VGL-S011",   "severity": "HIGH",     "name": "Insecure placeholder default for security-critical config"}
   ]
 }
