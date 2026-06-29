@@ -41,6 +41,7 @@ from .auth import JwtAlgorithmNoneRule, JwtVerifyDisabledRule, WeakSecretKeyRule
 from .rls import RlsDisabledRule, MissingTenantFilterRule
 from .logging_secrets import LoggingSecretsRule
 from .js_security import ProcessEnvFallbackRule, JsEvalNewFunctionRule
+from .swift import SwiftHardcodedSecretRule, SwiftPlainHttpRule, SwiftUserDefaultsSecretRule, SwiftSslBypassRule
 
 DEFAULT_RULES: list[Rule] = [
     # Secrets — hardcoded credentials
@@ -126,6 +127,11 @@ DEFAULT_RULES: list[Rule] = [
     # JS/TS specific
     ProcessEnvFallbackRule(),
     JsEvalNewFunctionRule(),
+    # Swift / iOS security
+    SwiftHardcodedSecretRule(),
+    SwiftPlainHttpRule(),
+    SwiftUserDefaultsSecretRule(),
+    SwiftSslBypassRule(),
 ]
 
 __all__ = [
