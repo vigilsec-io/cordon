@@ -51,7 +51,11 @@ from .github_actions import GhActionsSecretInRunRule, GhActionsExcessivePermissi
 from .xss import XssRule
 from .auth import JwtAlgorithmNoneRule, JwtVerifyDisabledRule, WeakSecretKeyRule, DebugModeEnabledRule
 from .rls import RlsDisabledRule, MissingTenantFilterRule
-from .logging_secrets import LoggingSecretsRule
+from .logging_secrets import LoggingSecretsRule, ErrorLeakRule, SilentAuthExceptionRule, CrlfLogInjectionRule
+from .deserialization import (
+    PickleDeserializeRule, YamlLoadRule, MarshalDeserializeRule,
+    PathTraversalRule, SstiRule,
+)
 from .js_security import ProcessEnvFallbackRule, JsEvalNewFunctionRule
 from .swift import SwiftHardcodedSecretRule, SwiftPlainHttpRule, SwiftUserDefaultsSecretRule, SwiftSslBypassRule
 
@@ -152,6 +156,15 @@ DEFAULT_RULES: list[Rule] = [
     MissingTenantFilterRule(),
     # Sensitive data in logs
     LoggingSecretsRule(),
+    ErrorLeakRule(),
+    SilentAuthExceptionRule(),
+    CrlfLogInjectionRule(),
+    # Insecure deserialization, path traversal, SSTI
+    PickleDeserializeRule(),
+    YamlLoadRule(),
+    MarshalDeserializeRule(),
+    PathTraversalRule(),
+    SstiRule(),
     # JS/TS specific
     ProcessEnvFallbackRule(),
     JsEvalNewFunctionRule(),

@@ -1,6 +1,8 @@
-"""Tests for logging secrets rule: VGL-LOG001."""
+"""Tests for logging secrets rules: VGL-LOG001–LOG004."""
 import pytest
-from vigil.rules.logging_secrets import LoggingSecretsRule
+from vigil.rules.logging_secrets import (
+    LoggingSecretsRule, ErrorLeakRule, SilentAuthExceptionRule, CrlfLogInjectionRule,
+)
 
 
 @pytest.fixture
@@ -87,3 +89,172 @@ class TestLoggingSecretsRule:
         f = py_file("logger.info('api_key=%s', api_key)\n")
         findings = self.rule.check(f)
         assert "log" in findings[0].fix.lower()
+
+
+# ── VGL-LOG002 — Error leak in HTTP response ─────────────────────────────────
+
+class TestErrorLeakRule:
+    rule = ErrorLeakRule()
+
+    def test_detects_return_str_exc(self, py_file):
+        f = py_file("    return str(e)\n")
+        assert self.rule.check(f)
+
+    def test_detects_return_str_exception_var(self, py_file):
+        f = py_file("    return str(exc)\n")
+        assert self.rule.check(f)
+
+    def test_detects_dict_error_str_exc(self, py_file):
+        f = py_file('    return {"error": str(e)}\n')
+        assert self.rule.check(f)
+
+    def test_detects_dict_detail_str_err(self, py_file):
+        f = py_file('    return {"detail": str(err)}\n')
+        assert self.rule.check(f)
+
+    def test_detects_traceback_format_exc(self, py_file):
+        f = py_file("    tb = traceback.format_exc()\n")
+        assert self.rule.check(f)
+
+    def test_detects_traceback_print_exc(self, py_file):
+        f = py_file("    traceback.print_exc()\n")
+        assert self.rule.check(f)
+
+    def test_finding_is_high(self, py_file):
+        f = py_file("    return str(e)\n")
+        from vigil.rules.base import Severity
+        assert self.rule.check(f)[0].severity == Severity.HIGH
+
+    def test_finding_has_correct_rule_id(self, py_file):
+        f = py_file("    return str(e)\n")
+        assert self.rule.check(f)[0].rule_id == "VGL-LOG002"
+
+    def test_fix_mentions_generic_error(self, py_file):
+        f = py_file("    return str(e)\n")
+        assert "Internal server error" in self.rule.check(f)[0].fix or "generic" in self.rule.check(f)[0].fix.lower()
+
+    def test_ignores_comment(self, py_file):
+        f = py_file("# return str(e)\n")
+        assert not self.rule.check(f)
+
+    def test_ignores_vigil_ignore(self, py_file):
+        f = py_file("    return str(e)  # vigil: ignore\n")
+        assert not self.rule.check(f)
+
+    def test_ignores_safe_str_usage(self, py_file):
+        f = py_file('    return {"count": str(total)}\n')
+        assert not self.rule.check(f)
+
+
+# ── VGL-LOG003 — Silent exception in auth context ────────────────────────────
+
+class TestSilentAuthExceptionRule:
+    rule = SilentAuthExceptionRule()
+
+    def test_detects_except_pass_in_auth_file(self, tmp_path):
+        f = tmp_path / "auth.py"
+        f.write_text(
+            "def authenticate(user, password):\n"
+            "    try:\n"
+            "        verify_token(token)\n"
+            "    except Exception:\n"
+            "        pass\n"
+        )
+        assert self.rule.check(f)
+
+    def test_detects_bare_except_pass_near_login(self, py_file):
+        f = py_file(
+            "def login(username, password):\n"
+            "    try:\n"
+            "        check_password(password)\n"
+            "    except:\n"
+            "        pass\n"
+        )
+        assert self.rule.check(f)
+
+    def test_ignores_except_pass_without_security_context(self, py_file):
+        f = py_file(
+            "def read_file(path):\n"
+            "    try:\n"
+            "        return open(path).read()\n"
+            "    except:\n"
+            "        pass\n"
+        )
+        assert not self.rule.check(f)
+
+    def test_finding_has_correct_rule_id(self, tmp_path):
+        f = tmp_path / "verify.py"
+        f.write_text(
+            "def verify_token(jwt):\n"
+            "    try:\n"
+            "        decode(jwt)\n"
+            "    except:\n"
+            "        pass\n"
+        )
+        assert self.rule.check(f)[0].rule_id == "VGL-LOG003"
+
+    def test_fix_mentions_logging(self, tmp_path):
+        f = tmp_path / "session.py"
+        f.write_text(
+            "def authenticate(user, password):\n"
+            "    try:\n"
+            "        check_credential(password)\n"
+            "    except:\n"
+            "        pass\n"
+        )
+        findings = self.rule.check(f)
+        assert "log" in findings[0].fix.lower()
+
+    def test_ignores_vigil_ignore(self, tmp_path):
+        f = tmp_path / "auth_helper.py"
+        f.write_text(
+            "def authenticate(user, token):\n"
+            "    try:\n"
+            "        check(token)\n"
+            "    except:  # vigil: ignore\n"
+            "        pass\n"
+        )
+        assert not self.rule.check(f)
+
+
+# ── VGL-LOG004 — CRLF injection via user input ───────────────────────────────
+
+class TestCrlfLogInjectionRule:
+    rule = CrlfLogInjectionRule()
+
+    def test_detects_logger_with_request_args(self, py_file):
+        f = py_file("logger.info('User: %s', request.args.get('name'))\n")
+        assert self.rule.check(f)
+
+    def test_detects_logger_with_query_params(self, py_file):
+        f = py_file("logger.debug('Query: %s', request.query_params['q'])\n")
+        assert self.rule.check(f)
+
+    def test_detects_print_with_request_path(self, py_file):
+        f = py_file("print('Accessed:', request.path)\n")
+        assert self.rule.check(f)
+
+    def test_detects_console_log_with_query_string(self, js_file):
+        f = js_file("console.log('Query:', request.GET['search']);\n")
+        assert self.rule.check(f)
+
+    def test_finding_has_correct_rule_id(self, py_file):
+        f = py_file("logger.info('search=%s', request.args['q'])\n")
+        assert self.rule.check(f)[0].rule_id == "VGL-LOG004"
+
+    def test_fix_mentions_strip(self, py_file):
+        f = py_file("logger.info('x=%s', request.GET['x'])\n")
+        findings = self.rule.check(f)
+        assert "replace" in findings[0].fix or "strip" in findings[0].fix
+
+    def test_ignores_log_without_user_input(self, py_file):
+        f = py_file("logger.info('Processing %d items', count)\n")
+        assert not self.rule.check(f)
+
+    def test_ignores_comment(self, py_file):
+        f = py_file("# logger.info('name=%s', request.args.get('name'))\n")
+        assert not self.rule.check(f)
+
+    def test_ignores_vigil_ignore(self, py_file):
+        f = py_file("logger.info('q=%s', request.args['q'])  # vigil: ignore\n")
+        assert not self.rule.check(f)
