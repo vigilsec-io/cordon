@@ -40,6 +40,7 @@ from .xss import XssRule
 from .auth import JwtAlgorithmNoneRule, JwtVerifyDisabledRule, WeakSecretKeyRule, DebugModeEnabledRule
 from .rls import RlsDisabledRule, MissingTenantFilterRule
 from .logging_secrets import LoggingSecretsRule
+from .js_security import ProcessEnvFallbackRule, JsEvalNewFunctionRule
 
 DEFAULT_RULES: list[Rule] = [
     # Secrets — hardcoded credentials
@@ -122,6 +123,9 @@ DEFAULT_RULES: list[Rule] = [
     MissingTenantFilterRule(),
     # Sensitive data in logs
     LoggingSecretsRule(),
+    # JS/TS specific
+    ProcessEnvFallbackRule(),
+    JsEvalNewFunctionRule(),
 ]
 
 __all__ = [
