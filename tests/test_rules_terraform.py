@@ -1,9 +1,13 @@
-"""Tests for Terraform security rules: VGL-TF001, VGL-TF002, VGL-TF003."""
+"""Tests for Terraform security rules: VGL-TF001–VGL-TF007."""
 import pytest
 from vigil.rules.terraform import (
     TerraformHardcodedSecretRule,
     TerraformPublicAccessRule,
     TerraformEncryptionDisabledRule,
+    TerraformImdsv1Rule,
+    TerraformStateEncryptionRule,
+    TerraformDeletionProtectionRule,
+    TerraformLoggingDisabledRule,
 )
 
 
@@ -153,3 +157,132 @@ class TestTerraformEncryptionDisabledRule:
     def test_finding_has_correct_rule_id(self, tf_file):
         f = tf_file('  storage_encrypted = false\n')
         assert self.rule.check(f)[0].rule_id == "VGL-TF003"
+
+
+# ── VGL-TF004 — IMDSv1 ───────────────────────────────────────────────────────
+
+class TestTerraformImdsv1Rule:
+    rule = TerraformImdsv1Rule()
+
+    def test_detects_http_tokens_optional(self, tf_file):
+        f = tf_file('  http_tokens = "optional"\n')
+        assert self.rule.check(f)
+
+    def test_ignores_http_tokens_required(self, tf_file):
+        f = tf_file('  http_tokens = "required"\n')
+        assert not self.rule.check(f)
+
+    def test_ignores_unrelated_terraform(self, tf_file):
+        f = tf_file('resource "aws_s3_bucket" "b" {\n  bucket = "my-bucket"\n}\n')
+        assert not self.rule.check(f)
+
+    def test_finding_is_critical(self, tf_file):
+        f = tf_file('  http_tokens = "optional"\n')
+        assert self.rule.check(f)[0].severity.name == "CRITICAL"
+
+    def test_finding_has_correct_rule_id(self, tf_file):
+        f = tf_file('  http_tokens = "optional"\n')
+        assert self.rule.check(f)[0].rule_id == "VGL-TF004"
+
+    def test_fix_mentions_imdsv2(self, tf_file):
+        f = tf_file('  http_tokens = "optional"\n')
+        assert "IMDSv2" in self.rule.check(f)[0].fix
+
+    def test_comment_line_ignored(self, tf_file):
+        f = tf_file('  # http_tokens = "optional"\n')
+        assert not self.rule.check(f)
+
+
+# ── VGL-TF005 — State backend unencrypted ────────────────────────────────────
+
+class TestTerraformStateEncryptionRule:
+    rule = TerraformStateEncryptionRule()
+
+    def test_detects_encrypt_false(self, tf_file):
+        f = tf_file('  encrypt = false\n')
+        assert self.rule.check(f)
+
+    def test_ignores_encrypt_true(self, tf_file):
+        f = tf_file('  encrypt = true\n')
+        assert not self.rule.check(f)
+
+    def test_does_not_collide_with_tf003(self, tf_file):
+        # TF003 catches `encrypted = false` (with 'd'); TF005 catches `encrypt = false` (no 'd')
+        f = tf_file('  storage_encrypted = false\n')
+        assert not self.rule.check(f)
+
+    def test_finding_is_high(self, tf_file):
+        f = tf_file('  encrypt = false\n')
+        assert self.rule.check(f)[0].severity.name == "HIGH"
+
+    def test_finding_has_correct_rule_id(self, tf_file):
+        f = tf_file('  encrypt = false\n')
+        assert self.rule.check(f)[0].rule_id == "VGL-TF005"
+
+    def test_fix_mentions_state(self, tf_file):
+        f = tf_file('  encrypt = false\n')
+        assert "state" in self.rule.check(f)[0].fix.lower()
+
+
+# ── VGL-TF006 — Deletion protection disabled ─────────────────────────────────
+
+class TestTerraformDeletionProtectionRule:
+    rule = TerraformDeletionProtectionRule()
+
+    def test_detects_deletion_protection_false(self, tf_file):
+        f = tf_file('  deletion_protection = false\n')
+        assert self.rule.check(f)
+
+    def test_ignores_deletion_protection_true(self, tf_file):
+        f = tf_file('  deletion_protection = true\n')
+        assert not self.rule.check(f)
+
+    def test_detects_disable_deletion_protection_true(self, tf_file):
+        f = tf_file('  disable_deletion_protection = true\n')
+        assert self.rule.check(f)
+
+    def test_finding_is_medium(self, tf_file):
+        f = tf_file('  deletion_protection = false\n')
+        assert self.rule.check(f)[0].severity.name == "MEDIUM"
+
+    def test_finding_has_correct_rule_id(self, tf_file):
+        f = tf_file('  deletion_protection = false\n')
+        assert self.rule.check(f)[0].rule_id == "VGL-TF006"
+
+    def test_comment_line_ignored(self, tf_file):
+        f = tf_file('  # deletion_protection = false  # disabled for testing\n')
+        assert not self.rule.check(f)
+
+
+# ── VGL-TF007 — Logging disabled ─────────────────────────────────────────────
+
+class TestTerraformLoggingDisabledRule:
+    rule = TerraformLoggingDisabledRule()
+
+    def test_detects_enable_logging_false(self, tf_file):
+        f = tf_file('  enable_logging = false\n')
+        assert self.rule.check(f)
+
+    def test_detects_enable_cloudwatch_logs_false(self, tf_file):
+        f = tf_file('  enable_cloudwatch_logs = false\n')
+        assert self.rule.check(f)
+
+    def test_detects_enable_flow_log_false(self, tf_file):
+        f = tf_file('  enable_flow_log = false\n')
+        assert self.rule.check(f)
+
+    def test_ignores_enable_logging_true(self, tf_file):
+        f = tf_file('  enable_logging = true\n')
+        assert not self.rule.check(f)
+
+    def test_finding_is_medium(self, tf_file):
+        f = tf_file('  enable_logging = false\n')
+        assert self.rule.check(f)[0].severity.name == "MEDIUM"
+
+    def test_finding_has_correct_rule_id(self, tf_file):
+        f = tf_file('  enable_logging = false\n')
+        assert self.rule.check(f)[0].rule_id == "VGL-TF007"
+
+    def test_comment_line_ignored(self, tf_file):
+        f = tf_file('  # enable_logging = false\n')
+        assert not self.rule.check(f)

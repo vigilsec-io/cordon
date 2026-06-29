@@ -28,7 +28,7 @@ from .dockerfile import (
 from .nginx import NginxSecurityHeadersRule
 from .trivy import TrivyIacScanRule
 from .deps import PipAuditRule, NpmAuditRule
-from .k8s import K8sSecurityRule
+from .k8s import K8sSecurityRule, K8sPrivilegeEscalationRule, K8sCapabilitiesRule, K8sHostPathVolumeRule
 from .iam import IamWildcardRule
 from .agency import LlmShellExecRule, AutoApprovalBypassRule, UnboundedAgentLoopRule, LlmOutputFileWriteRule
 from .mcp_security import McpToolPoisoningRule, McpDynamicDescriptionRule, McpShellToolRule
@@ -42,7 +42,11 @@ from .shell import ShellSecretInjectionRule
 from .web import SsrfRule, SqlInjectionFstringRule, SqlOrmRawRule, CorsWildcardRule, SslVerifyDisabledRule
 from .crypto import WeakRandomnessRule
 from .packages import PackageAuditRule
-from .terraform import TerraformHardcodedSecretRule, TerraformPublicAccessRule, TerraformEncryptionDisabledRule
+from .terraform import (
+    TerraformHardcodedSecretRule, TerraformPublicAccessRule, TerraformEncryptionDisabledRule,
+    TerraformImdsv1Rule, TerraformStateEncryptionRule,
+    TerraformDeletionProtectionRule, TerraformLoggingDisabledRule,
+)
 from .github_actions import GhActionsSecretInRunRule, GhActionsExcessivePermissionsRule, GhActionsUnpinnedActionRule
 from .xss import XssRule
 from .auth import JwtAlgorithmNoneRule, JwtVerifyDisabledRule, WeakSecretKeyRule, DebugModeEnabledRule
@@ -93,6 +97,9 @@ DEFAULT_RULES: list[Rule] = [
     NpmAuditRule(),
     # Kubernetes manifest security
     K8sSecurityRule(),
+    K8sPrivilegeEscalationRule(),
+    K8sCapabilitiesRule(),
+    K8sHostPathVolumeRule(),
     # IAM policy wildcards
     IamWildcardRule(),
     # Excessive agency — AI agents without human oversight
@@ -125,6 +132,10 @@ DEFAULT_RULES: list[Rule] = [
     TerraformHardcodedSecretRule(),
     TerraformPublicAccessRule(),
     TerraformEncryptionDisabledRule(),
+    TerraformImdsv1Rule(),
+    TerraformStateEncryptionRule(),
+    TerraformDeletionProtectionRule(),
+    TerraformLoggingDisabledRule(),
     # GitHub Actions security
     GhActionsSecretInRunRule(),
     GhActionsExcessivePermissionsRule(),
