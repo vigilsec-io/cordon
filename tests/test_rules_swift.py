@@ -94,6 +94,18 @@ class TestSwiftHardcodedSecretRule:
         f = sw('let tsKey = "zora_feed_cache_ts_v2"\n')
         assert not self.rule.check(f)
 
+    def test_ignores_snake_case_storage_key(self, sw):
+        f = sw('static let jwt      = "zora_jwt_token"\n')
+        assert not self.rule.check(f)
+
+    def test_ignores_snake_case_user_id_key(self, sw):
+        f = sw('static let userID   = "zora_apple_user_id"\n')
+        assert not self.rule.check(f)
+
+    def test_still_catches_real_jwt_secret(self, sw):
+        f = sw('let jwtSecret = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"\n')
+        assert self.rule.check(f)
+
 
 # ── VGL-SW002 — Plain HTTP URL ────────────────────────────────────────────────
 
