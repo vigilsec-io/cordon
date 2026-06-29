@@ -232,7 +232,7 @@ class SslVerifyDisabledRule(Rule):
     severity = Severity.HIGH
 
     _PAT = re.compile(
-        r"""(?:verify\s*=\s*False|ssl\._create_unverified_context|"""
+        r"""(?:(?<!\w)verify\s*=\s*False|ssl\._create_unverified_context|"""
         r"""CERT_NONE|verify_ssl\s*=\s*False|check_hostname\s*=\s*False|"""
         r"""ssl_verify\s*=\s*False|InsecureRequestWarning|urllib3\.disable_warnings)""",
         re.IGNORECASE,
