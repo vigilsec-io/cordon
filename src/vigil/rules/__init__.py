@@ -53,6 +53,7 @@ DEFAULT_RULES: list[Rule] = [
     StripeLiveKeyRule(),
     SlackTokenRule(),
     GenericProviderKeyRule(),
+    InsecureConfigDefaultRule(),
     # Code injection
     EvalInjectionRule(),
     ShellTrueRule(),
