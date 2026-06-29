@@ -159,3 +159,24 @@ class GenericProviderKeyRule(_GrepRule):
     severity = Severity.CRITICAL
     pattern = r"(?:sk-[a-zA-Z0-9]{20,}|gh[ps]_[a-zA-Z0-9]{36,}|glpat-[a-zA-Z0-9_\-]{20,}|AIza[0-9A-Za-z\-_]{35})"
     fix = "Rotate this key at the provider's console immediately. Move to a secrets manager (AWS SSM, Azure Key Vault, GCP Secret Manager, HashiCorp Vault, Doppler) and inject via environment variable."
+
+
+class InsecureConfigDefaultRule(_GrepRule):
+    id = "VGL-S011"
+    name = "Insecure placeholder default for security-critical config"
+    severity = Severity.HIGH
+    # Two forms:
+    # 1. os.getenv/environ.get — any string default for a secret-named var is unsafe
+    # 2. custom ._get() — fires when both a secret keyword and a placeholder word appear
+    pattern = (
+        r"""(?i)(?:"""
+        r"""os\.(?:getenv|environ\.get)\s*\(\s*["'][^"']*(?:secret|password|passwd|token|api.?key|jwt|signing)[^"']*["']\s*,\s*["'][^"']+["']"""
+        r"""|"""
+        r"""\._get\s*\([^)]*["'][^"']*(?:secret|password|passwd|token|api.?key|jwt|signing)[^"']*["'][^)]*,\s*["'][^"']*(?:dev[-_]|change|placeholder|example|your.?secret)[^"']*["']"""
+        r""")"""
+    )
+    fix = (
+        "Remove the hardcoded default. Raise RuntimeError at startup if the secret is not configured — "
+        "fail loudly rather than fall back to a known-weak value. "
+        "Example: val = os.getenv('SECRET_KEY'); if not val: raise RuntimeError('SECRET_KEY is required')"
+    )
