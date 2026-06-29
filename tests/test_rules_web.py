@@ -162,3 +162,12 @@ class TestSslVerifyDisabledRule:
     def test_ignores_comment(self, py_file):
         f = py_file('# verify=False is insecure — do not use\n')
         assert not self.rule.check(f)
+
+    def test_ignores_variable_named_needs_verify(self, py_file):
+        # Regression: needs_verify = False is a local boolean, not SSL disabling
+        f = py_file('needs_verify = False\n')
+        assert not self.rule.check(f)
+
+    def test_ignores_should_verify_flag(self, py_file):
+        f = py_file('should_verify = False\n')
+        assert not self.rule.check(f)
