@@ -118,3 +118,51 @@ def test_credential_url_not_flagged_in_gitleaksignore(tmp_path):
     f = tmp_path / ".gitleaksignore"
     f.write_text("postgresql://user:pass@host:5432/db\n")
     assert CredentialUrlRule().applies_to(f) is False
+
+
+# ── VGL-S011 — Insecure config default ────────────────────────────────────────
+
+def test_insecure_os_getenv_secret_detected(tmp_path):
+    f = tmp_path / "config.py"
+    f.write_text('SECRET_KEY = os.getenv("SECRET_KEY", "changeme")\n')
+    assert len(InsecureConfigDefaultRule().check(f)) == 1
+
+
+def test_insecure_environ_get_jwt_detected(tmp_path):
+    f = tmp_path / "auth.py"
+    f.write_text('jwt_secret = os.environ.get("JWT_SECRET", "dev-fallback")\n')
+    assert len(InsecureConfigDefaultRule().check(f)) == 1
+
+
+def test_insecure_custom_getter_detected(tmp_path):
+    """Regression: cadre config.py pattern that triggered VGL-S011 addition."""
+    f = tmp_path / "config.py"
+    f.write_text(
+        '        return self._get("CADRE_SECRET_KEY", "/cadre/secret_key", "dev-secret-key-change-in-prod")\n'
+    )
+    assert len(InsecureConfigDefaultRule().check(f)) == 1
+
+
+def test_insecure_password_getenv_detected(tmp_path):
+    f = tmp_path / "settings.py"
+    f.write_text('DB_PWD = os.getenv("DB_PASSWORD", "admin")\n')
+    assert len(InsecureConfigDefaultRule().check(f)) == 1
+
+
+def test_no_default_not_flagged(tmp_path):
+    f = tmp_path / "config.py"
+    f.write_text('KEY = os.getenv("SECRET_KEY")\n')
+    assert InsecureConfigDefaultRule().check(f) == []
+
+
+def test_non_secret_var_not_flagged(tmp_path):
+    f = tmp_path / "config.py"
+    f.write_text('LEVEL = os.getenv("LOG_LEVEL", "info")\n')
+    assert InsecureConfigDefaultRule().check(f) == []
+
+
+def test_dynamic_default_not_flagged(tmp_path):
+    """Fallback to another env var is acceptable — no string literal default."""
+    f = tmp_path / "config.py"
+    f.write_text('KEY = os.getenv("SECRET_KEY", os.environ.get("FALLBACK_KEY"))\n')
+    assert InsecureConfigDefaultRule().check(f) == []
