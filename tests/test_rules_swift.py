@@ -78,6 +78,22 @@ class TestSwiftHardcodedSecretRule:
         f = sw('let password = "mysecretpass"\n')
         assert "Keychain" in self.rule.check(f)[0].fix
 
+    def test_ignores_string_interpolation_key(self, sw):
+        f = sw('let key = "\\(brand.lowercased())||\\(baseName(name))"\n')
+        assert not self.rule.check(f)
+
+    def test_ignores_cache_key_variable_name(self, sw):
+        f = sw('let cacheKey = "zora_search_cache_v2"\n')
+        assert not self.rule.check(f)
+
+    def test_ignores_cache_store_key(self, sw):
+        f = sw('private static let cacheStoreKey = "zora_search_cache_v3"\n')
+        assert not self.rule.check(f)
+
+    def test_ignores_cache_value_in_non_cache_var(self, sw):
+        f = sw('let tsKey = "zora_feed_cache_ts_v2"\n')
+        assert not self.rule.check(f)
+
 
 # ── VGL-SW002 — Plain HTTP URL ────────────────────────────────────────────────
 
