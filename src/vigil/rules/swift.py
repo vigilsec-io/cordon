@@ -58,20 +58,31 @@ class SwiftHardcodedSecretRule(Rule):
                 continue
             if "vigil: ignore" in line:
                 continue
-            if self._PAT.search(line) or self._STATIC.search(line):
-                findings.append(Finding(
-                    rule_id=self.id,
-                    severity=self.severity,
-                    message="Hardcoded secret in Swift source — value visible in compiled binary and git history",
-                    file_path=path,
-                    line=i,
-                    snippet=line.strip()[:120],
-                    fix=(
-                        "Store secrets in the iOS Keychain (KeychainHelper) or load from a "
-                        "remote config endpoint at runtime. Never hardcode credentials in source — "
-                        "they are extractable from the .ipa binary with standard tools (strings, otool)."
-                    ),
-                ))
+            if not (self._PAT.search(line) or self._STATIC.search(line)):
+                continue
+            # FP guard 1: Swift string interpolation → constructed at runtime, not a literal secret
+            if r'\(' in line:
+                continue
+            # FP guard 2: cache keys are UserDefaults identifiers, not secrets
+            var_m = re.search(r'(?:let|var)\s+(\w+)', line)
+            val_m = re.search(r'=\s*"([^"]+)"', line)
+            var_name = var_m.group(1) if var_m else ""
+            val_str = val_m.group(1) if val_m else ""
+            if "cache" in var_name.lower() or "cache" in val_str.lower():
+                continue
+            findings.append(Finding(
+                rule_id=self.id,
+                severity=self.severity,
+                message="Hardcoded secret in Swift source — value visible in compiled binary and git history",
+                file_path=path,
+                line=i,
+                snippet=line.strip()[:120],
+                fix=(
+                    "Store secrets in the iOS Keychain (KeychainHelper) or load from a "
+                    "remote config endpoint at runtime. Never hardcode credentials in source — "
+                    "they are extractable from the .ipa binary with standard tools (strings, otool)."
+                ),
+            ))
         return findings
 
 
