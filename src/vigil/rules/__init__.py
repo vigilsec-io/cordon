@@ -129,7 +129,7 @@ __all__ = [
     "AwsAccessKeyRule", "HardcodedPasswordRule", "HardcodedApiKeyRule",
     "HardcodedTokenRule", "EvalInjectionRule", "ShellTrueRule", "OsSystemRule",
     "JwtSecretRule", "PemPrivateKeyRule", "CredentialUrlRule",
-    "StripeLiveKeyRule", "SlackTokenRule", "GenericProviderKeyRule",
+    "StripeLiveKeyRule", "SlackTokenRule", "GenericProviderKeyRule", "InsecureConfigDefaultRule",
     "DockerPortExposureRule", "DockerComposeEnvSecretRule",
     "DockerfileEnvSecretRule", "DockerfileRootUserRule", "DockerfileLatestTagRule",
     "NginxSecurityHeadersRule",
