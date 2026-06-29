@@ -3,6 +3,7 @@ from pathlib import Path
 from vigil.rules.secrets import (
     AwsAccessKeyRule, HardcodedPasswordRule, HardcodedApiKeyRule,
     EvalInjectionRule, ShellTrueRule, OsSystemRule, CredentialUrlRule,
+    InsecureConfigDefaultRule,
 )
 from vigil.rules.base import Severity
 
