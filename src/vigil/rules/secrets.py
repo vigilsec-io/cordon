@@ -132,10 +132,14 @@ class CredentialUrlRule(_GrepRule):
     fix = "Extract credentials from the URL. Read user/password from a secrets manager (AWS SSM, Azure Key Vault, GCP Secret Manager, HashiCorp Vault) and construct the URL at runtime."
 
     def applies_to(self, path: Path) -> bool:
-        return super().applies_to(path) and path.name not in _SECURITY_TOOL_CONFIGS
+        return (
+            super().applies_to(path)
+            and path.name not in _SECURITY_TOOL_CONFIGS
+            and not path.name.startswith("test_")
+        )
 
     def check(self, path: Path) -> list[Finding]:
-        if path.name in _SECURITY_TOOL_CONFIGS:
+        if path.name in _SECURITY_TOOL_CONFIGS or path.name.startswith("test_"):
             return []
         return super().check(path)
 
