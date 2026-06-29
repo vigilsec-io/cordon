@@ -13,6 +13,7 @@ from .secrets import (
     StripeLiveKeyRule,
     SlackTokenRule,
     GenericProviderKeyRule,
+    InsecureConfigDefaultRule,
 )
 from .docker import DockerPortExposureRule, DockerComposeEnvSecretRule
 from .dockerfile import DockerfileEnvSecretRule, DockerfileRootUserRule, DockerfileLatestTagRule
