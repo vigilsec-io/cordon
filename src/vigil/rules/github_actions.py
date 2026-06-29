@@ -140,6 +140,8 @@ class GhActionsUnpinnedActionRule(Rule):
     _USES = re.compile(r"uses\s*:\s*(\S+@\S+)", re.IGNORECASE)
     # A pinned SHA: 7–40 hex chars
     _PINNED_SHA = re.compile(r"^[0-9a-f]{7,40}$", re.IGNORECASE)
+    # Floating branch refs — CRITICAL (can be force-pushed by attacker)
+    _FLOATING = re.compile(r"^(?:main|master|HEAD|latest|develop|dev)$", re.IGNORECASE)
 
     def applies_to(self, path: Path) -> bool:
         return path.suffix in _GH_EXTS
@@ -163,19 +165,22 @@ class GhActionsUnpinnedActionRule(Rule):
             if not m:
                 continue
             ref = m.group(1).rsplit("@", 1)[-1].split()[0].rstrip("\"'")
-            if not self._PINNED_SHA.match(ref):
-                findings.append(Finding(
-                    rule_id=self.id,
-                    severity=self.severity,
-                    message=f"Action uses mutable ref '@{ref}' — a tag or branch that can be silently updated",
-                    file_path=path,
-                    line=i,
-                    snippet=line.strip()[:120],
-                    fix=(
-                        f"Pin to a full commit SHA: uses: {m.group(1).rsplit('@', 1)[0]}@<sha>  # {ref}\n"
-                        "Find the SHA: on GitHub → the action's repo → the tag → copy the commit SHA. "
-                        "Mutable tags are a supply chain attack vector — an attacker who controls the "
-                        "action repo can push malicious code to the same tag."
-                    ),
-                ))
+            if self._PINNED_SHA.match(ref):
+                continue
+            sev = Severity.CRITICAL if self._FLOATING.match(ref) else Severity.HIGH
+            findings.append(Finding(
+                rule_id=self.id,
+                severity=sev,
+                message=f"Action uses mutable ref '@{ref}' — {'floating branch' if self._FLOATING.match(ref) else 'version tag'} that can be silently updated",
+                file_path=path,
+                line=i,
+                snippet=line.strip()[:120],
+                fix=(
+                    f"Pin to a full commit SHA: uses: {m.group(1).rsplit('@', 1)[0]}@<sha>  # {ref}\n"
+                    "Find the SHA: on GitHub → the action's repo → the tag → copy the commit SHA. "
+                    "Mutable tags are a supply chain attack vector — an attacker who controls the "
+                    "action repo can push malicious code to the same tag. "
+                    "tj-actions (March 2025, CVSS 8.6): 23,000+ repos compromised via force-pushed tag."
+                ),
+            ))
         return findings

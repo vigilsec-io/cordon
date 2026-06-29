@@ -48,6 +48,11 @@ from .terraform import (
     TerraformDeletionProtectionRule, TerraformLoggingDisabledRule,
 )
 from .github_actions import GhActionsSecretInRunRule, GhActionsExcessivePermissionsRule, GhActionsUnpinnedActionRule
+from .gha import (
+    GhaPwnRequestRule, GhaScriptInjectionRule, GhaSecretsInRunRule,
+    GhaMissingPermissionsRule, GhaCachePoisoningRule,
+    GhaSelfHostedOnPrRule, GhaWorkflowRunNoRefRule,
+)
 from .xss import XssRule
 from .auth import JwtAlgorithmNoneRule, JwtVerifyDisabledRule, WeakSecretKeyRule, DebugModeEnabledRule
 from .rls import RlsDisabledRule, MissingTenantFilterRule
@@ -140,10 +145,18 @@ DEFAULT_RULES: list[Rule] = [
     TerraformStateEncryptionRule(),
     TerraformDeletionProtectionRule(),
     TerraformLoggingDisabledRule(),
-    # GitHub Actions security
+    # GitHub Actions security (legacy GH001-003)
     GhActionsSecretInRunRule(),
     GhActionsExcessivePermissionsRule(),
     GhActionsUnpinnedActionRule(),
+    # GitHub Actions security — advanced (GHA001-008)
+    GhaPwnRequestRule(),
+    GhaScriptInjectionRule(),
+    GhaSecretsInRunRule(),
+    GhaMissingPermissionsRule(),
+    GhaCachePoisoningRule(),
+    GhaSelfHostedOnPrRule(),
+    GhaWorkflowRunNoRefRule(),
     # Cross-Site Scripting
     XssRule(),
     # Broken authentication
