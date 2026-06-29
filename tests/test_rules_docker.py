@@ -1,5 +1,9 @@
 import pytest
-from vigil.rules.docker import DockerPortExposureRule, DockerComposeEnvSecretRule
+from vigil.rules.docker import (
+    DockerPortExposureRule, DockerComposeEnvSecretRule,
+    DockerPrivilegedRule, DockerHostNetworkRule,
+    DockerSocketMountRule, DockerDangerousVolumeRule,
+)
 from vigil.rules.base import Severity
 
 rule = DockerPortExposureRule()
@@ -217,3 +221,213 @@ def test_file_suffix_non_secrets_path_still_flagged(tmp_path):
     findings = env_rule.check(f)
     assert len(findings) == 1
     assert "POSTGRES_PASSWORD_FILE" in findings[0].message
+
+
+# ── VGL-D003 — privileged mode ────────────────────────────────────────────────
+
+_PRIVILEGED_COMPOSE = """\
+services:
+  worker:
+    image: myapp:latest
+    privileged: true
+"""
+
+_SAFE_COMPOSE_NO_PRIV = """\
+services:
+  worker:
+    image: myapp:latest
+    cap_add:
+      - NET_ADMIN
+"""
+
+
+class TestDockerPrivilegedRule:
+    rule = DockerPrivilegedRule()
+
+    def test_detects_privileged_true(self, tmp_path):
+        f = tmp_path / "docker-compose.yml"
+        f.write_text(_PRIVILEGED_COMPOSE)
+        assert self.rule.check(f)
+
+    def test_ignores_cap_add_instead(self, tmp_path):
+        f = tmp_path / "docker-compose.yml"
+        f.write_text(_SAFE_COMPOSE_NO_PRIV)
+        assert not self.rule.check(f)
+
+    def test_finding_is_critical(self, tmp_path):
+        f = tmp_path / "docker-compose.yml"
+        f.write_text(_PRIVILEGED_COMPOSE)
+        assert self.rule.check(f)[0].severity == Severity.CRITICAL
+
+    def test_finding_has_correct_rule_id(self, tmp_path):
+        f = tmp_path / "docker-compose.yml"
+        f.write_text(_PRIVILEGED_COMPOSE)
+        assert self.rule.check(f)[0].rule_id == "VGL-D003"
+
+    def test_fix_mentions_cap_add(self, tmp_path):
+        f = tmp_path / "docker-compose.yml"
+        f.write_text(_PRIVILEGED_COMPOSE)
+        assert "cap_add" in self.rule.check(f)[0].fix
+
+    def test_does_not_apply_to_plain_yaml(self, tmp_path):
+        f = tmp_path / "values.yaml"
+        assert not self.rule.applies_to(f)
+
+
+# ── VGL-D004 — host network mode ─────────────────────────────────────────────
+
+_HOST_NETWORK_COMPOSE = """\
+services:
+  proxy:
+    image: nginx:alpine
+    network_mode: host
+"""
+
+_BRIDGE_NETWORK_COMPOSE = """\
+services:
+  proxy:
+    image: nginx:alpine
+    networks:
+      - frontend
+"""
+
+
+class TestDockerHostNetworkRule:
+    rule = DockerHostNetworkRule()
+
+    def test_detects_network_mode_host(self, tmp_path):
+        f = tmp_path / "docker-compose.yml"
+        f.write_text(_HOST_NETWORK_COMPOSE)
+        assert self.rule.check(f)
+
+    def test_ignores_bridge_network(self, tmp_path):
+        f = tmp_path / "docker-compose.yml"
+        f.write_text(_BRIDGE_NETWORK_COMPOSE)
+        assert not self.rule.check(f)
+
+    def test_finding_is_high(self, tmp_path):
+        f = tmp_path / "docker-compose.yml"
+        f.write_text(_HOST_NETWORK_COMPOSE)
+        assert self.rule.check(f)[0].severity == Severity.HIGH
+
+    def test_finding_has_correct_rule_id(self, tmp_path):
+        f = tmp_path / "docker-compose.yml"
+        f.write_text(_HOST_NETWORK_COMPOSE)
+        assert self.rule.check(f)[0].rule_id == "VGL-D004"
+
+    def test_network_mode_with_quotes(self, tmp_path):
+        f = tmp_path / "docker-compose.yml"
+        f.write_text('services:\n  app:\n    network_mode: "host"\n')
+        assert self.rule.check(f)
+
+
+# ── VGL-D005 — Docker socket mount ───────────────────────────────────────────
+
+_SOCK_COMPOSE = """\
+services:
+  ci:
+    image: docker:dind
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+"""
+
+_SAFE_VOLUME_COMPOSE = """\
+services:
+  app:
+    volumes:
+      - ./data:/data
+      - ./logs:/var/log/app
+"""
+
+
+class TestDockerSocketMountRule:
+    rule = DockerSocketMountRule()
+
+    def test_detects_docker_sock(self, tmp_path):
+        f = tmp_path / "docker-compose.yml"
+        f.write_text(_SOCK_COMPOSE)
+        assert self.rule.check(f)
+
+    def test_ignores_safe_volumes(self, tmp_path):
+        f = tmp_path / "docker-compose.yml"
+        f.write_text(_SAFE_VOLUME_COMPOSE)
+        assert not self.rule.check(f)
+
+    def test_finding_is_critical(self, tmp_path):
+        f = tmp_path / "docker-compose.yml"
+        f.write_text(_SOCK_COMPOSE)
+        assert self.rule.check(f)[0].severity == Severity.CRITICAL
+
+    def test_finding_has_correct_rule_id(self, tmp_path):
+        f = tmp_path / "docker-compose.yml"
+        f.write_text(_SOCK_COMPOSE)
+        assert self.rule.check(f)[0].rule_id == "VGL-D005"
+
+    def test_fix_mentions_proxy(self, tmp_path):
+        f = tmp_path / "docker-compose.yml"
+        f.write_text(_SOCK_COMPOSE)
+        assert "proxy" in self.rule.check(f)[0].fix.lower()
+
+
+# ── VGL-D006 — dangerous volume mounts ───────────────────────────────────────
+
+_DANGEROUS_VOL_COMPOSE = """\
+services:
+  app:
+    volumes:
+      - /etc:/etc:ro
+      - ./data:/data
+"""
+
+_PROC_VOL_COMPOSE = """\
+services:
+  monitor:
+    volumes:
+      - /proc:/proc
+"""
+
+_HOME_VOL_COMPOSE = """\
+services:
+  app:
+    volumes:
+      - /root:/root
+"""
+
+
+class TestDockerDangerousVolumeRule:
+    rule = DockerDangerousVolumeRule()
+
+    def test_detects_etc_mount(self, tmp_path):
+        f = tmp_path / "docker-compose.yml"
+        f.write_text(_DANGEROUS_VOL_COMPOSE)
+        assert self.rule.check(f)
+
+    def test_detects_proc_mount(self, tmp_path):
+        f = tmp_path / "docker-compose.yml"
+        f.write_text(_PROC_VOL_COMPOSE)
+        assert self.rule.check(f)
+
+    def test_detects_root_mount(self, tmp_path):
+        f = tmp_path / "docker-compose.yml"
+        f.write_text(_HOME_VOL_COMPOSE)
+        assert self.rule.check(f)
+
+    def test_ignores_safe_volumes(self, tmp_path):
+        f = tmp_path / "docker-compose.yml"
+        f.write_text(_SAFE_VOLUME_COMPOSE)
+        assert not self.rule.check(f)
+
+    def test_docker_sock_not_double_flagged(self, tmp_path):
+        f = tmp_path / "docker-compose.yml"
+        f.write_text(_SOCK_COMPOSE)
+        assert not self.rule.check(f)  # D005 handles this, D006 skips it
+
+    def test_finding_is_high(self, tmp_path):
+        f = tmp_path / "docker-compose.yml"
+        f.write_text(_PROC_VOL_COMPOSE)
+        assert self.rule.check(f)[0].severity == Severity.HIGH
+
+    def test_finding_has_correct_rule_id(self, tmp_path):
+        f = tmp_path / "docker-compose.yml"
+        f.write_text(_DANGEROUS_VOL_COMPOSE)
+        assert self.rule.check(f)[0].rule_id == "VGL-D006"

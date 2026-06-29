@@ -15,8 +15,16 @@ from .secrets import (
     GenericProviderKeyRule,
     InsecureConfigDefaultRule,
 )
-from .docker import DockerPortExposureRule, DockerComposeEnvSecretRule
-from .dockerfile import DockerfileEnvSecretRule, DockerfileRootUserRule, DockerfileLatestTagRule
+from .docker import (
+    DockerPortExposureRule, DockerComposeEnvSecretRule,
+    DockerPrivilegedRule, DockerHostNetworkRule,
+    DockerSocketMountRule, DockerDangerousVolumeRule,
+)
+from .dockerfile import (
+    DockerfileEnvSecretRule, DockerfileRootUserRule, DockerfileLatestTagRule,
+    DockerfileCurlBashRule, DockerfileInsecureFetchRule,
+    DockerfileAddLocalRule, DockerfileWildcardCopyRule, DockerfileChmod777Rule,
+)
 from .nginx import NginxSecurityHeadersRule
 from .trivy import TrivyIacScanRule
 from .deps import PipAuditRule, NpmAuditRule
@@ -63,10 +71,19 @@ DEFAULT_RULES: list[Rule] = [
     # Docker IaC
     DockerPortExposureRule(),
     DockerComposeEnvSecretRule(),
+    DockerPrivilegedRule(),
+    DockerHostNetworkRule(),
+    DockerSocketMountRule(),
+    DockerDangerousVolumeRule(),
     # Dockerfile hardening
     DockerfileEnvSecretRule(),
     DockerfileRootUserRule(),
     DockerfileLatestTagRule(),
+    DockerfileCurlBashRule(),
+    DockerfileInsecureFetchRule(),
+    DockerfileAddLocalRule(),
+    DockerfileWildcardCopyRule(),
+    DockerfileChmod777Rule(),
     # nginx security
     NginxSecurityHeadersRule(),
     # Trivy IaC deep scan
