@@ -120,6 +120,35 @@ def test_credential_url_not_flagged_in_gitleaksignore(tmp_path):
     assert CredentialUrlRule().applies_to(f) is False
 
 
+def test_credential_url_not_flagged_in_test_file(tmp_path):
+    """Regression: VGL-S007 must skip test_*.py — test fixtures use placeholder DB URLs."""
+    f = tmp_path / "test_config.py"
+    f.write_text('db_url="postgresql://x:x@localhost/test"\n')
+    assert CredentialUrlRule().check(f) == []
+    assert CredentialUrlRule().applies_to(f) is False
+
+
+def test_pragma_allowlist_secret_suppresses_api_key(tmp_path):
+    """Regression: inline # pragma: allowlist secret must suppress VGL-S003."""
+    f = tmp_path / "conftest.py"
+    f.write_text('admin_api_key="test-admin-key",  # pragma: allowlist secret\n')
+    assert HardcodedApiKeyRule().check(f) == []
+
+
+def test_vigil_ignore_suppresses_api_key(tmp_path):
+    """Regression: inline # vigil: ignore must suppress VGL-S003."""
+    f = tmp_path / "conftest.py"
+    f.write_text('admin_api_key="test-admin-key",  # vigil: ignore\n')
+    assert HardcodedApiKeyRule().check(f) == []
+
+
+def test_pragma_allowlist_does_not_suppress_full_comment_line(tmp_path):
+    """A full-comment line is already skipped by the # prefix check; pragma still works."""
+    f = tmp_path / "app.py"
+    f.write_text('# api_key="somekey12345"  # pragma: allowlist secret\n')
+    assert HardcodedApiKeyRule().check(f) == []
+
+
 # ── VGL-S011 — Insecure config default ────────────────────────────────────────
 
 def test_insecure_os_getenv_secret_detected(tmp_path):
