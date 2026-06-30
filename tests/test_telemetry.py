@@ -128,8 +128,8 @@ def test_summary_counts_by_rule(tmp_path):
         result = telemetry.summary()
 
     assert result["total_findings"] == 3
-    assert result["by_rule"]["VGL-D001"] == 2
-    assert result["by_rule"]["VGL-S001"] == 1
+    assert result["by_rule"]["VGL-D001"]["count"] == 2
+    assert result["by_rule"]["VGL-S001"]["count"] == 1
 
 
 def test_engine_respects_telemetry_false(tmp_path):
