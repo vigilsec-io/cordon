@@ -143,8 +143,10 @@ class ErrorLeakRule(Rule):
     severity = Severity.HIGH
 
     # return str(e) / return str(exception) / return str(ex)
+    # Excludes tuple returns whose first element is a bool/None — those are internal
+    # utility patterns (e.g. `return False, str(e)[:80]`), not HTTP responses.
     _STR_EXC = re.compile(
-        r"""\breturn\b.*\bstr\s*\(\s*(?:e|ex|exc|err|error|exception|exp)\s*\)""",
+        r"""\breturn\b(?!\s+(?:True|False|None)\s*,).*\bstr\s*\(\s*(?:e|ex|exc|err|error|exception|exp)\s*\)""",
         re.IGNORECASE,
     )
     # return {"error": str(e)} / return {"detail": str(exc)} / return {"message": str(err)}
