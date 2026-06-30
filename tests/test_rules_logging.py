@@ -137,6 +137,25 @@ class TestErrorLeakRule:
         f = py_file("# return str(e)\n")
         assert not self.rule.check(f)
 
+    # ── Regression: bool-first tuple returns (VGL-LOG002 FP) ─────────────────
+    def test_ignores_false_tuple_return(self, py_file):
+        """return False, str(e)[:80] — internal utility, not HTTP response."""
+        f = py_file("        return False, str(e)[:80]\n")
+        assert not self.rule.check(f)
+
+    def test_ignores_true_tuple_return(self, py_file):
+        f = py_file("        return True, str(exception)\n")
+        assert not self.rule.check(f)
+
+    def test_ignores_none_tuple_return(self, py_file):
+        f = py_file("        return None, str(err)\n")
+        assert not self.rule.check(f)
+
+    def test_still_detects_plain_str_return(self, py_file):
+        """Lookahead fix must not suppress bare return str(e)."""
+        f = py_file("        return str(e)\n")
+        assert self.rule.check(f)
+
     def test_ignores_vigil_ignore(self, py_file):
         f = py_file("    return str(e)  # vigil: ignore\n")
         assert not self.rule.check(f)
