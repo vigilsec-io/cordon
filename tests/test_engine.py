@@ -89,3 +89,43 @@ def test_rule_not_applied_to_wrong_file_type(tmp_path):
     findings = engine.scan(py_file)
     # DockerPortExposureRule.applies_to() returns False for .py
     assert findings == []
+
+
+def test_pragma_allowlist_suppresses_finding(tmp_path):
+    """'# pragma: allowlist secret' on the same line suppresses a finding."""
+    from vigil.rules.base import Rule, Finding, Severity
+
+    class AlwaysRule(Rule):
+        id = "VGL-TEST-SUP"
+        name = "test"
+        severity = Severity.HIGH
+        def applies_to(self, path): return True
+        def check(self, path):
+            return [Finding(rule_id=self.id, severity=self.severity,
+                            message="hit", file_path=path, line=1)]
+
+    f = tmp_path / "secret.py"
+    f.write_text("TOKEN = 'abc'  # pragma: allowlist secret\n")
+    engine = Engine(rules=[AlwaysRule()], telemetry_enabled=False)
+    findings = engine.scan(f)
+    assert findings == []
+
+
+def test_vigil_ignore_still_suppresses(tmp_path):
+    """'# vigil: ignore' continues to suppress findings after pragma addition."""
+    from vigil.rules.base import Rule, Finding, Severity
+
+    class AlwaysRule(Rule):
+        id = "VGL-TEST-IGN"
+        name = "test"
+        severity = Severity.HIGH
+        def applies_to(self, path): return True
+        def check(self, path):
+            return [Finding(rule_id=self.id, severity=self.severity,
+                            message="hit", file_path=path, line=1)]
+
+    f = tmp_path / "secret.py"
+    f.write_text("TOKEN = 'abc'  # vigil: ignore\n")
+    engine = Engine(rules=[AlwaysRule()], telemetry_enabled=False)
+    findings = engine.scan(f)
+    assert findings == []
