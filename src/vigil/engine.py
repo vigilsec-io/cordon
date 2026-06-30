@@ -4,6 +4,9 @@ from . import telemetry as _telemetry
 from . import findingslog as _findingslog
 
 
+_SUPPRESS_MARKERS = ("# vigil: ignore", "# pragma: allowlist secret")
+
+
 class Engine:
     def __init__(self, rules: list[Rule] | None = None, telemetry_enabled: bool = True) -> None:
         self.rules = rules if rules is not None else DEFAULT_RULES
@@ -12,8 +15,10 @@ class Engine:
     def scan(self, path: Path) -> list[Finding]:
         """Scan a single file. Returns findings sorted by severity (CRITICAL first).
 
-        Lines containing '# vigil: ignore' are suppressed — same pattern as
-        '# noqa' (flake8) and '# nosec' (bandit).
+        Lines containing '# vigil: ignore' or '# pragma: allowlist secret' are
+        suppressed — same pattern as '# noqa' (flake8) and '# nosec' (bandit).
+        Suppressed findings are recorded as false-positive events in telemetry so
+        per-rule precision can be tracked over time.
         """
         if not path.is_file():
             return []
@@ -24,17 +29,21 @@ class Engine:
 
         applicable = [r for r in self.rules if r.applies_to(path)]
         findings: list[Finding] = []
+        suppressed: list[Finding] = []
         for rule in applicable:
             for f in rule.check(path):
                 if (
                     f.line
                     and f.line <= len(source_lines)
-                    and "# vigil: ignore" in source_lines[f.line - 1]
+                    and any(m in source_lines[f.line - 1] for m in _SUPPRESS_MARKERS)
                 ):
+                    suppressed.append(f)
                     continue
                 findings.append(f)
         sorted_findings = sorted(findings, key=lambda f: SEVERITY_ORDER[f.severity])
         _telemetry.record(sorted_findings, telemetry_enabled=self._telemetry)
+        if suppressed:
+            _telemetry.record(suppressed, telemetry_enabled=self._telemetry, fp=True)
         _findingslog.append(sorted_findings)
         return sorted_findings
 

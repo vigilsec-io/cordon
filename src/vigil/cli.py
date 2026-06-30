@@ -75,40 +75,30 @@ def _run_init(global_install: bool) -> None:
     print("Reload Claude Code to activate.")
 
 
-def _run_stats() -> None:
-    from pathlib import Path as _Path
-    import json as _json
-    from collections import Counter
+def _run_stats(fmt: str = "terminal") -> None:
+    from . import telemetry as _tel
 
-    events_file = _Path.home() / ".vigil" / "events.jsonl"
+    data = _tel.summary()
 
-    if not events_file.exists():
-        print("No scan data yet. Run vigil scan on a file to start collecting stats.")
-        print("Opt-out: set VIGIL_NO_TELEMETRY=1 or telemetry=false in .vigilrc")
+    if not data:
+        if fmt == "json":
+            print("{}")
+        else:
+            print("No scan data yet. Run vigil scan on a file to start collecting stats.")
+            print("Opt-out: set VIGIL_NO_TELEMETRY=1 or telemetry=false in .vigilrc")
         return
 
-    events: list[dict] = []
-    with events_file.open() as fh:
-        for line in fh:
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                events.append(_json.loads(line))
-            except _json.JSONDecodeError:
-                continue
-
-    if not events:
-        print("No scan data yet.")
+    if fmt == "json":
+        print(_json.dumps(data, indent=2))
         return
 
-    total = len(events)
-    by_rule: Counter = Counter(e["rule_id"] for e in events)
-    by_severity: Counter = Counter(e.get("severity", "?") for e in events)
-    by_ext: Counter = Counter(e.get("file_ext", "") or "no ext" for e in events)
-    timestamps = sorted(e["ts"] for e in events if e.get("ts"))
-    first_scan = timestamps[0][:10] if timestamps else "—"
-    last_scan  = timestamps[-1][:10] if timestamps else "—"
+    total = data.get("total_findings", 0)
+    total_fp = data.get("total_fp", 0)
+    first_scan = data.get("first_scan", "—") or "—"
+    last_scan = data.get("last_scan", "—") or "—"
+    by_rule = data.get("by_rule", {})
+    by_severity = data.get("by_severity", {})
+    by_ext = data.get("by_ext", {})
 
     _B = "\033[1m"
     _R = "\033[0m"
@@ -122,29 +112,48 @@ def _run_stats() -> None:
         return f"{_SEV_COLOR.get(s, '')}{s}{_R}"
 
     print(f"\n{_B}Vigil — local scan stats{_R}")
-    print("─" * 44)
-    print(f"  {_B}Total findings recorded{_R}   {total}")
+    print("─" * 60)
+    fp_note = f"  {_D}({total_fp} suppressed via ignore markers){_R}" if total_fp else ""
+    print(f"  {_B}Total findings recorded{_R}   {total}{fp_note}")
     print(f"  {_D}First scan{_R}  {first_scan}  {_D}·  Last scan{_R}  {last_scan}")
 
-    print(f"\n  {_B}Top rules{_R}")
-    print(f"  {'─' * 42}")
-    for rule_id, count in by_rule.most_common(10):
+    # Top rules table: hit count bar + precision + first/last seen
+    print(f"\n  {_B}Top rules{_R}  {_D}(precision = findings / (findings + suppressed)){_R}")
+    print(f"  {'─' * 58}")
+    sorted_rules = sorted(by_rule.items(), key=lambda x: -x[1]["count"])[:10]
+    for rule_id, stats in sorted_rules:
+        count = stats["count"]
+        fp_count = stats.get("fp_count", 0)
+        precision = stats.get("precision", 1.0)
+        first = stats.get("first_seen", "")[:10] or "—"
+        last = stats.get("last_seen", "")[:10] or "—"
         bar = "█" * min(count, 20)
-        pct = int(count / total * 100)
-        print(f"  {rule_id:<12}  {bar:<20}  {count:>4}  ({pct:>2}%)")
+        pct = int(count / total * 100) if total else 0
+        prec_str = f"{int(precision * 100):>3}%" if fp_count else "  — "
+        prec_col = "\033[91m" if precision < 0.8 else ("\033[93m" if precision < 0.95 else "")
+        prec_colored = f"{prec_col}{prec_str}{_R}"
+        print(f"  {rule_id:<12}  {bar:<20}  {count:>4} ({pct:>2}%)  prec {prec_colored}  {_D}{first} → {last}{_R}")
 
     print(f"\n  {_B}By severity{_R}")
     print(f"  {'─' * 42}")
     for sev in ["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO"]:
         count = by_severity.get(sev, 0)
         if count:
-            pct = int(count / total * 100)
+            pct = int(count / total * 100) if total else 0
             print(f"  {_sev(sev):<22}  {count:>4}  ({pct:>2}%)")
 
     print(f"\n  {_B}By file type{_R}")
     print(f"  {'─' * 42}")
-    for ext, count in by_ext.most_common(8):
+    for ext, count in sorted(by_ext.items(), key=lambda x: -x[1])[:8]:
         print(f"  {ext:<14}  {count:>4}")
+
+    # Precision warnings: any rule with recorded FPs below 80%
+    low_prec = [(rid, s) for rid, s in by_rule.items() if s.get("fp_count", 0) > 0 and s["precision"] < 0.8]
+    if low_prec:
+        print(f"\n  {_B}⚠  Low-precision rules{_R}  {_D}(< 80% — consider tuning){_R}")
+        print(f"  {'─' * 42}")
+        for rid, s in sorted(low_prec, key=lambda x: x[1]["precision"]):
+            print(f"  {rid:<14}  {int(s['precision']*100)}%  ({s['fp_count']} suppressed / {s['count'] + s['fp_count']} total)")
 
     print(f"\n{_D}Stats are local-only · stored at ~/.vigil/events.jsonl{_R}\n")
 
@@ -226,7 +235,12 @@ def main() -> None:
     )
 
     sub.add_parser("feedback", help="Open the Vigil feedback & waitlist page")
-    sub.add_parser("stats", help="Show local scan statistics from ~/.vigil/events.jsonl")
+
+    stats_p = sub.add_parser("stats", help="Show local scan statistics from ~/.vigil/events.jsonl")
+    stats_p.add_argument(
+        "--format", choices=["terminal", "json"], default="terminal",
+        help="Output format (default: terminal)",
+    )
 
     log_p = sub.add_parser("log", help="Show persistent findings log (~/.vigil/findings.jsonl)")
     log_p.add_argument("--project", default=None, help="Filter by path prefix (e.g. 'cadre', 'scout')")
@@ -248,7 +262,7 @@ def main() -> None:
         return
 
     if args.command == "stats":
-        _run_stats()
+        _run_stats(fmt=getattr(args, "format", "terminal"))
         return
 
     if args.command == "log":
