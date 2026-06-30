@@ -1,7 +1,7 @@
 import json
 import sys
 from pathlib import Path
-from .rules import Finding, Severity
+from .rules import Finding, Severity, SEVERITY_ORDER
 
 _SARIF_LEVEL = {
     Severity.CRITICAL: "error",
@@ -20,6 +20,50 @@ _COLORS = {
 }
 _RESET = "\033[0m"
 _BOLD  = "\033[1m"
+
+
+def dedup_findings(findings: list[Finding]) -> list[Finding]:
+    """Merge findings that share the same category on the same file.
+
+    When a native rule and VGL-T001 (Trivy) both catch the same root cause
+    (e.g. running as root → VGL-DF001 + Trivy DS-0002), surface one finding
+    at the highest severity and annotate it with the corroborating rule ID.
+    Findings without a category pass through unchanged.
+    """
+    from collections import defaultdict
+
+    uncategorized: list[Finding] = []
+    by_key: dict[tuple, list[Finding]] = defaultdict(list)
+
+    for f in findings:
+        if f.category is None:
+            uncategorized.append(f)
+        else:
+            by_key[(f.file_path, f.category)].append(f)
+
+    merged: list[Finding] = []
+    for group in by_key.values():
+        if len(group) == 1:
+            merged.append(group[0])
+            continue
+        # Primary = highest severity; prefer findings with line numbers on ties
+        group.sort(key=lambda f: (SEVERITY_ORDER[f.severity], 0 if f.line else 1))
+        primary = group[0]
+        other_ids = ", ".join(f.rule_id for f in group[1:])
+        merged.append(Finding(
+            rule_id=primary.rule_id,
+            severity=primary.severity,
+            message=f"{primary.message} [corroborated by {other_ids}]",
+            file_path=primary.file_path,
+            line=primary.line,
+            snippet=primary.snippet,
+            fix=primary.fix,
+            category=primary.category,
+        ))
+
+    result = merged + uncategorized
+    result.sort(key=lambda f: SEVERITY_ORDER[f.severity])
+    return result
 
 
 def _c(sev: Severity, text: str, use_color: bool) -> str:
@@ -107,7 +151,7 @@ def report_json(results: dict[Path, list[Finding]]) -> str:
     out = []
     for path, findings in results.items():
         for f in findings:
-            out.append({
+            entry: dict = {
                 "rule_id": f.rule_id,
                 "severity": f.severity.value,
                 "message": f.message,
@@ -115,5 +159,8 @@ def report_json(results: dict[Path, list[Finding]]) -> str:
                 "line": f.line,
                 "snippet": f.snippet,
                 "fix": f.fix,
-            })
+            }
+            if f.category:
+                entry["category"] = f.category
+            out.append(entry)
     return json.dumps(out, indent=2)

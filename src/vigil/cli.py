@@ -15,7 +15,7 @@ from pathlib import Path
 
 from .config import load_config
 from .engine import Engine
-from .reporter import report_terminal, report_json, report_sarif
+from .reporter import report_terminal, report_json, report_sarif, dedup_findings
 from .rules import DEFAULT_RULES, Severity, SEVERITY_ORDER
 
 
@@ -149,6 +149,57 @@ def _run_stats() -> None:
     print(f"\n{_D}Stats are local-only · stored at ~/.vigil/events.jsonl{_R}\n")
 
 
+def _run_log(args) -> None:
+    from . import findingslog
+    import json as _json2
+
+    entries = findingslog.read(
+        project=args.project,
+        severity=args.severity,
+        since=args.since,
+        limit=args.limit,
+    )
+
+    if not entries:
+        print("No findings logged yet. Run vigil scan on a file to start.")
+        print(f"Log: {findingslog._log_path()}")
+        return
+
+    if args.format == "json":
+        print(_json2.dumps(entries, indent=2))
+        return
+
+    _SEV_COLOR = {
+        "CRITICAL": "\033[91m", "HIGH": "\033[93m",
+        "MEDIUM":   "\033[94m", "LOW":  "\033[96m", "INFO": "\033[37m",
+    }
+    _R = "\033[0m"
+    _D = "\033[2m"
+    _B = "\033[1m"
+
+    print(f"\n{_B}Vigil findings log{_R}  {_D}({len(entries)} shown · {findingslog._log_path()}){_R}\n")
+    print(f"  {'DATE':<12}  {'SEV':<8}  {'RULE':<14}  {'FILE':<30}  TITLE")
+    print("  " + "─" * 84)
+
+    for e in entries:
+        ts = e.get("ts", "")[:10]
+        sev = e.get("severity", "?")
+        col = _SEV_COLOR.get(sev, "")
+        rule = e.get("rule", "?")
+        file_str = e.get("file", "?")
+        # Show only the last 2 path components for readability
+        try:
+            from pathlib import Path as _Path
+            parts = _Path(file_str).parts
+            file_short = "/".join(parts[-2:]) if len(parts) >= 2 else file_str
+        except Exception:
+            file_short = file_str
+        title = e.get("title", "")[:48]
+        print(f"  {_D}{ts}{_R}  {col}{sev:<8}{_R}  {rule:<14}  {file_short:<30}  {title}")
+
+    print()
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         prog="vigil",
@@ -177,6 +228,13 @@ def main() -> None:
     sub.add_parser("feedback", help="Open the Vigil feedback & waitlist page")
     sub.add_parser("stats", help="Show local scan statistics from ~/.vigil/events.jsonl")
 
+    log_p = sub.add_parser("log", help="Show persistent findings log (~/.vigil/findings.jsonl)")
+    log_p.add_argument("--project", default=None, help="Filter by path prefix (e.g. 'cadre', 'scout')")
+    log_p.add_argument("--severity", choices=[s.value for s in Severity], default=None, help="Filter by severity")
+    log_p.add_argument("--since", default=None, metavar="DATE", help="Filter by date, e.g. 2026-06-28")
+    log_p.add_argument("--limit", type=int, default=20, help="Max rows to show (default: 20)")
+    log_p.add_argument("--format", choices=["terminal", "json"], default="terminal")
+
     args = parser.parse_args()
     if args.command is None:
         parser.print_help()
@@ -191,6 +249,10 @@ def main() -> None:
 
     if args.command == "stats":
         _run_stats()
+        return
+
+    if args.command == "log":
+        _run_log(args)
         return
 
     if args.command == "init":
@@ -215,6 +277,8 @@ def main() -> None:
         print(f"vigil: path not found: {path}", file=sys.stderr)
         sys.exit(1)
 
+    # Dedup: merge native + Trivy findings that share the same root cause category
+    results = {p: dedup_findings(fs) for p, fs in results.items()}
     all_findings = [f for fs in results.values() for f in fs]
 
     # --severity flag takes priority over .vigilrc min_severity
