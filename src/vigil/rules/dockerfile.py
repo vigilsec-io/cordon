@@ -45,6 +45,7 @@ class DockerfileEnvSecretRule(Rule):
                     line=i,
                     snippet=stripped[:120],
                     fix="Never bake DB URLs with credentials into images. Inject at runtime via environment variables from a secrets manager (AWS SSM, Azure Key Vault, GCP Secret Manager, HashiCorp Vault, Doppler).",
+                    category="secret_in_layer",
                 ))
                 continue
             # Name-based: secret key name with any value
@@ -59,6 +60,7 @@ class DockerfileEnvSecretRule(Rule):
                 line=i,
                 snippet=stripped[:120],
                 fix="Inject at runtime via environment variables or Docker secrets — never bake into image layers. Use a secrets manager (AWS SSM, Azure Key Vault, GCP Secret Manager, HashiCorp Vault, Doppler).",
+                category="secret_in_layer",
             ))
         return findings
 
@@ -88,6 +90,7 @@ class DockerfileRootUserRule(Rule):
                 "  RUN useradd -r -u 1001 appuser\n"
                 "  USER appuser"
             ),
+            category="root_user",
         )]
 
 
@@ -126,6 +129,7 @@ class DockerfileLatestTagRule(Rule):
                     line=i,
                     snippet=stripped,
                     fix='Pin to a specific digest or tag: e.g. "python:3.12.3-slim"',
+                    category="unpinned_image",
                 ))
         return findings
 

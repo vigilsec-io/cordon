@@ -3,6 +3,18 @@ import subprocess
 from pathlib import Path
 from .base import Finding, Rule, Severity
 
+# Maps Trivy check IDs to semantic categories so the reporter can deduplicate
+# when both a native rule and Trivy catch the same root cause.
+_TRIVY_CATEGORY: dict[str, str] = {
+    "DS-0001": "unpinned_image",   # Image tag not pinned
+    "DS-0002": "root_user",        # Container should not be run as root
+    "DS-0031": "secret_in_layer",  # Secret found in ENV/ARG
+    # AVD-prefixed equivalents (trivy config --format json uses both forms)
+    "AVD-DS-0001": "unpinned_image",
+    "AVD-DS-0002": "root_user",
+    "AVD-DS-0031": "secret_in_layer",
+}
+
 _TRIVY_SEV: dict[str, Severity] = {
     "CRITICAL": Severity.CRITICAL,
     "HIGH": Severity.HIGH,
@@ -58,5 +70,6 @@ class TrivyIacScanRule(Rule):
                     message=f"[{rule_id}] {title}",
                     file_path=path,
                     fix=misc.get("Resolution") or misc.get("Message") or "",
+                    category=_TRIVY_CATEGORY.get(rule_id),
                 ))
         return findings

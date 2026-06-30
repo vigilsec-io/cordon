@@ -1,6 +1,7 @@
 from pathlib import Path
 from .rules import DEFAULT_RULES, Finding, Rule, Severity, SEVERITY_ORDER
 from . import telemetry as _telemetry
+from . import findingslog as _findingslog
 
 
 class Engine:
@@ -34,6 +35,7 @@ class Engine:
                 findings.append(f)
         sorted_findings = sorted(findings, key=lambda f: SEVERITY_ORDER[f.severity])
         _telemetry.record(sorted_findings, telemetry_enabled=self._telemetry)
+        _findingslog.append(sorted_findings)
         return sorted_findings
 
     def scan_dir(

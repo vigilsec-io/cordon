@@ -30,6 +30,9 @@ class Finding:
     line: int | None = None
     snippet: str | None = None
     fix: str | None = None
+    # Semantic category for deduplication when multiple rules catch the same root cause.
+    # e.g. "root_user", "unpinned_image", "secret_in_layer"
+    category: str | None = None
 
 
 class Rule(ABC):
