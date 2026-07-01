@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions: read-all
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install
+        run: pip install -e "." pytest==8.3.4 bandit
+
+      - name: Test
+        run: pytest tests/ -q
+
+      - name: Security (bandit)
+        run: bandit -r src/vigil/ --skip B404,B603,B607,B110,B101 -ll -q
+
+      - name: Trivy (IaC + deps)
+        uses: aquasecurity/trivy-action@df678dbccf677bc6937338d569ba0da18964a8cc  # master
+        with:
+          scan-type: fs
+          scan-ref: .
+          severity: HIGH,CRITICAL
+          skip-dirs: venv,node_modules
