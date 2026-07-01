@@ -138,7 +138,7 @@ def report_sarif(results: dict[Path, list[Finding]], tool_version: str = "0.1.0"
                 "driver": {
                     "name": "vigil",
                     "version": tool_version,
-                    "informationUri": "https://github.com/fwss/vigil",
+                    "informationUri": "https://pypi.org/project/vigilsec",
                     "rules": sarif_rules,
                 }
             },
