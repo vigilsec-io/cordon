@@ -280,7 +280,7 @@ class PackageAuditRule(Rule):
                 if earliest and release_count <= 2:
                     try:
                         from datetime import datetime
-                        age_days = (datetime.utcnow() - datetime.fromisoformat(earliest)).days
+                        age_days = (datetime.now() - datetime.fromisoformat(earliest)).days
                         if age_days < 90:
                             findings.append(Finding(
                                 rule_id="VGL-PKG004",
