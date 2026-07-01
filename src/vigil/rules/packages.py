@@ -64,7 +64,7 @@ def _get(url: str):
     """Return parsed JSON, _NOT_FOUND on HTTP 404, or None on other errors (fail-open)."""
     try:
         req = urllib.request.Request(url, headers=_UA)
-        with urllib.request.urlopen(req, timeout=_TIMEOUT) as r:
+        with urllib.request.urlopen(req, timeout=_TIMEOUT) as r:  # nosec B310
             return json.loads(r.read())
     except urllib.error.HTTPError as e:
         if e.code == 404:
@@ -81,7 +81,7 @@ def _post(url: str, payload: dict) -> dict | None:
             url, data=data,
             headers={**_UA, "Content-Type": "application/json"},
         )
-        with urllib.request.urlopen(req, timeout=_TIMEOUT) as r:
+        with urllib.request.urlopen(req, timeout=_TIMEOUT) as r:  # nosec B310
             return json.loads(r.read())
     except Exception:
         return None

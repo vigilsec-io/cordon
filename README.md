@@ -273,7 +273,7 @@ Findings appear as inline annotations on PR diffs in the GitHub Security tab.
 ## Development
 
 ```bash
-git clone http://your-gitea/fwss/vigil.git
+git clone https://github.com/vigilsec/vigil.git
 cd vigil
 python3 -m venv venv && source venv/bin/activate
 pip install -e ".[dev]"
