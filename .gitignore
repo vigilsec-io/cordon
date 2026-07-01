@@ -30,3 +30,14 @@ secrets.toml
 .pytest_cache/
 htmlcov/
 .coverage
+
+# VS Code extension build artifacts
+vigil-vscode/out/
+vigil-vscode/node_modules/
+vigil-vscode/*.vsix
+
+# Workspace-internal — never push to public GitHub
+CLAUDE.md
+ACTIVE_TASK.md
+PRODUCT_VISION.md
+.gitea/
