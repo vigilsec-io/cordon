@@ -11,6 +11,10 @@ from .base import Finding, Rule, Severity
 
 _AI_EXTS = {".py", ".ts", ".js"}
 
+# Strips content from single- and double-quoted string literals so patterns
+# like "auto_approve = True" in test fixture args don't trigger the rule.
+_STRIP_STRINGS = re.compile(r'"[^"\\]*(?:\\.[^"\\]*)*"|\'[^\'\\]*(?:\\.[^\'\\]*)*\'')
+
 _LLM_IMPORT = re.compile(
     r"(?:import|from|require)\s+.*(?:anthropic|openai|langchain|llama|cohere|mistral|google\.generativeai)",
     re.IGNORECASE,
@@ -40,7 +44,7 @@ class LlmShellExecRule(Rule):
             return []
         findings = []
         for i, line in enumerate(lines, 1):
-            if self._PAT.search(line):
+            if self._PAT.search(_STRIP_STRINGS.sub('""', line)):
                 findings.append(Finding(
                     rule_id=self.id,
                     severity=self.severity,
@@ -78,7 +82,7 @@ class AutoApprovalBypassRule(Rule):
             stripped = line.strip()
             if stripped.startswith("#"):  # commented-out code is not live code
                 continue
-            if self._PAT.search(line):
+            if self._PAT.search(_STRIP_STRINGS.sub('""', line)):
                 findings.append(Finding(
                     rule_id=self.id,
                     severity=self.severity,
@@ -158,7 +162,7 @@ class LlmOutputFileWriteRule(Rule):
             return []
         findings = []
         for i, line in enumerate(lines, 1):
-            if self._PAT.search(line):
+            if self._PAT.search(_STRIP_STRINGS.sub('""', line)):
                 findings.append(Finding(
                     rule_id=self.id,
                     severity=self.severity,
