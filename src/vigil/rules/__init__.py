@@ -27,7 +27,7 @@ from .dockerfile import (
 )
 from .nginx import NginxSecurityHeadersRule
 from .trivy import TrivyIacScanRule
-from .deps import PipAuditRule, NpmAuditRule
+from .deps import PipAuditRule, NpmAuditRule, OsvScannerRule
 from .k8s import K8sSecurityRule, K8sPrivilegeEscalationRule, K8sCapabilitiesRule, K8sHostPathVolumeRule
 from .iam import IamWildcardRule
 from .agency import LlmShellExecRule, AutoApprovalBypassRule, UnboundedAgentLoopRule, LlmOutputFileWriteRule
@@ -104,6 +104,7 @@ DEFAULT_RULES: list[Rule] = [
     # Dependency CVE scanning
     PipAuditRule(),
     NpmAuditRule(),
+    OsvScannerRule(),
     # Kubernetes manifest security
     K8sSecurityRule(),
     K8sPrivilegeEscalationRule(),
@@ -198,7 +199,7 @@ __all__ = [
     "DockerfileEnvSecretRule", "DockerfileRootUserRule", "DockerfileLatestTagRule",
     "NginxSecurityHeadersRule",
     "TrivyIacScanRule",
-    "PipAuditRule", "NpmAuditRule",
+    "PipAuditRule", "NpmAuditRule", "OsvScannerRule",
     "K8sSecurityRule",
     "IamWildcardRule",
     "LlmShellExecRule", "AutoApprovalBypassRule", "UnboundedAgentLoopRule", "LlmOutputFileWriteRule",

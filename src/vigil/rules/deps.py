@@ -120,3 +120,61 @@ class NpmAuditRule(Rule):
                 fix="Run npm audit fix or pin to a safe version in package.json.",
             ))
         return findings
+
+
+class OsvScannerRule(Rule):
+    """VGL-DEP003: CVEs in Go/Rust/Maven/Gradle lockfiles via osv-scanner CLI.
+
+    osv-scanner exits 1 when vulnerabilities are found.  We capture stdout
+    regardless of exit code, so fail-open if the tool is absent or times out.
+    """
+
+    id = "VGL-DEP003"
+    name = "Vulnerable lockfile package (osv-scanner)"
+    severity = Severity.HIGH
+    _LOCKFILES = {"go.sum", "Cargo.lock", "pom.xml", "gradle.lockfile"}
+    _TOOLS = (
+        "/opt/homebrew/bin/osv-scanner",
+        "/usr/local/bin/osv-scanner",
+        "/usr/bin/osv-scanner",
+    )
+
+    def applies_to(self, path: Path) -> bool:
+        return path.name in self._LOCKFILES
+
+    def check(self, path: Path) -> list[Finding]:
+        tool = _find_tool(*self._TOOLS)
+        if not tool:
+            return []
+        try:
+            result = subprocess.run(
+                [tool, "scan", "--format", "json", str(path)],
+                capture_output=True, text=True, timeout=120,
+            )
+        except (subprocess.TimeoutExpired, FileNotFoundError):
+            return []
+        raw = result.stdout.strip()
+        if not raw:
+            return []
+        try:
+            data = json.loads(raw)
+        except json.JSONDecodeError:
+            return []
+        findings = []
+        for res in data.get("results", []):
+            for pkg in res.get("packages", []):
+                vulns = pkg.get("vulnerabilities", [])
+                if not vulns:
+                    continue
+                info = pkg.get("package", {})
+                pkg_name = info.get("name", "unknown")
+                version = info.get("version", "?")
+                ids = ", ".join(v["id"] for v in vulns[:3])
+                findings.append(Finding(
+                    rule_id=self.id,
+                    severity=self.severity,
+                    message=f"{pkg_name}@{version}: {ids}",
+                    file_path=path,
+                    fix=f"Upgrade {pkg_name} to a patched version. See https://osv.dev/ for details.",
+                ))
+        return findings
