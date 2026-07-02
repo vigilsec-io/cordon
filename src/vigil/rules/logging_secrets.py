@@ -160,14 +160,25 @@ class ErrorLeakRule(Rule):
         re.IGNORECASE,
     )
 
+    # Only fire in files that import a web framework — internal agent/script files
+    # returning str(e) in dicts for logging/Telegram are not HTTP response leaks.
+    _WEB_IMPORT = re.compile(
+        r"^\s*(?:from|import)\s+(?:fastapi|flask|starlette|django|aiohttp|tornado|sanic|falcon|quart|litestar)",
+        re.IGNORECASE | re.MULTILINE,
+    )
+
     def applies_to(self, path: Path) -> bool:
         return path.suffix in _CODE_EXTS
 
     def check(self, path: Path) -> list[Finding]:
         try:
-            lines = path.read_text(errors="ignore").splitlines()
+            text = path.read_text(errors="ignore")
         except (OSError, PermissionError):
             return []
+        # Skip non-HTTP files — str(e) in internal dicts is fine
+        if not self._WEB_IMPORT.search(text):
+            return []
+        lines = text.splitlines()
         findings = []
         for i, line in enumerate(lines, 1):
             stripped = line.lstrip()
