@@ -16,7 +16,7 @@ keywords = ["security", "devsecops", "docker", "ai", "claude", "static-analysis"
 
 [project.urls]
 Homepage = "https://thefwss.com/vigil"
-Source = "https://github.com/vigilsec-io/vigil"
+Source = "https://github.com/vigilsec-io/cordon"
 Feedback = "https://thefwss.com/vigil"
 
 [project.scripts]
