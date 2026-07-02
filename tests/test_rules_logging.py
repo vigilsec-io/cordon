@@ -14,6 +14,15 @@ def py_file(tmp_path):
     return _make
 
 @pytest.fixture
+def web_py_file(tmp_path):
+    """Python file with a FastAPI import — VGL-LOG002 only fires in web handlers."""
+    def _make(content):
+        f = tmp_path / "router.py"
+        f.write_text("from fastapi import APIRouter\n" + content)
+        return f
+    return _make
+
+@pytest.fixture
 def js_file(tmp_path):
     def _make(content):
         f = tmp_path / "app.js"
@@ -96,72 +105,83 @@ class TestLoggingSecretsRule:
 class TestErrorLeakRule:
     rule = ErrorLeakRule()
 
-    def test_detects_return_str_exc(self, py_file):
-        f = py_file("    return str(e)\n")
+    def test_detects_return_str_exc(self, web_py_file):
+        f = web_py_file("    return str(e)\n")
         assert self.rule.check(f)
 
-    def test_detects_return_str_exception_var(self, py_file):
-        f = py_file("    return str(exc)\n")
+    def test_detects_return_str_exception_var(self, web_py_file):
+        f = web_py_file("    return str(exc)\n")
         assert self.rule.check(f)
 
-    def test_detects_dict_error_str_exc(self, py_file):
-        f = py_file('    return {"error": str(e)}\n')
+    def test_detects_dict_error_str_exc(self, web_py_file):
+        f = web_py_file('    return {"error": str(e)}\n')
         assert self.rule.check(f)
 
-    def test_detects_dict_detail_str_err(self, py_file):
-        f = py_file('    return {"detail": str(err)}\n')
+    def test_detects_dict_detail_str_err(self, web_py_file):
+        f = web_py_file('    return {"detail": str(err)}\n')
         assert self.rule.check(f)
 
-    def test_detects_traceback_format_exc(self, py_file):
-        f = py_file("    tb = traceback.format_exc()\n")
+    def test_detects_traceback_format_exc(self, web_py_file):
+        f = web_py_file("    tb = traceback.format_exc()\n")
         assert self.rule.check(f)
 
-    def test_detects_traceback_print_exc(self, py_file):
-        f = py_file("    traceback.print_exc()\n")
+    def test_detects_traceback_print_exc(self, web_py_file):
+        f = web_py_file("    traceback.print_exc()\n")
         assert self.rule.check(f)
 
-    def test_finding_is_high(self, py_file):
-        f = py_file("    return str(e)\n")
+    def test_finding_is_high(self, web_py_file):
+        f = web_py_file("    return str(e)\n")
         from vigil.rules.base import Severity
         assert self.rule.check(f)[0].severity == Severity.HIGH
 
-    def test_finding_has_correct_rule_id(self, py_file):
-        f = py_file("    return str(e)\n")
+    def test_finding_has_correct_rule_id(self, web_py_file):
+        f = web_py_file("    return str(e)\n")
         assert self.rule.check(f)[0].rule_id == "VGL-LOG002"
 
-    def test_fix_mentions_generic_error(self, py_file):
-        f = py_file("    return str(e)\n")
+    def test_fix_mentions_generic_error(self, web_py_file):
+        f = web_py_file("    return str(e)\n")
         assert "Internal server error" in self.rule.check(f)[0].fix or "generic" in self.rule.check(f)[0].fix.lower()
 
-    def test_ignores_comment(self, py_file):
-        f = py_file("# return str(e)\n")
+    def test_ignores_comment(self, web_py_file):
+        f = web_py_file("# return str(e)\n")
         assert not self.rule.check(f)
 
     # ── Regression: bool-first tuple returns (VGL-LOG002 FP) ─────────────────
-    def test_ignores_false_tuple_return(self, py_file):
+    def test_ignores_false_tuple_return(self, web_py_file):
         """return False, str(e)[:80] — internal utility, not HTTP response."""
-        f = py_file("        return False, str(e)[:80]\n")
+        f = web_py_file("        return False, str(e)[:80]\n")
         assert not self.rule.check(f)
 
-    def test_ignores_true_tuple_return(self, py_file):
-        f = py_file("        return True, str(exception)\n")
+    def test_ignores_true_tuple_return(self, web_py_file):
+        f = web_py_file("        return True, str(exception)\n")
         assert not self.rule.check(f)
 
-    def test_ignores_none_tuple_return(self, py_file):
-        f = py_file("        return None, str(err)\n")
+    def test_ignores_none_tuple_return(self, web_py_file):
+        f = web_py_file("        return None, str(err)\n")
         assert not self.rule.check(f)
 
-    def test_still_detects_plain_str_return(self, py_file):
+    def test_still_detects_plain_str_return(self, web_py_file):
         """Lookahead fix must not suppress bare return str(e)."""
-        f = py_file("        return str(e)\n")
+        f = web_py_file("        return str(e)\n")
         assert self.rule.check(f)
 
-    def test_ignores_vigil_ignore(self, py_file):
-        f = py_file("    return str(e)  # vigil: ignore\n")
+    def test_ignores_vigil_ignore(self, web_py_file):
+        f = web_py_file("    return str(e)  # vigil: ignore\n")
         assert not self.rule.check(f)
 
-    def test_ignores_safe_str_usage(self, py_file):
-        f = py_file('    return {"count": str(total)}\n')
+    def test_ignores_safe_str_usage(self, web_py_file):
+        f = web_py_file('    return {"count": str(total)}\n')
+        assert not self.rule.check(f)
+
+    # ── Regression: non-HTTP files must not fire (VGL-LOG002 FP from qa_runner) ─
+    def test_ignores_internal_agent_reason_dict(self, py_file):
+        """Agent/script files returning str(e) in dicts for Telegram/logging are not HTTP leaks."""
+        f = py_file('        return {"app": app, "skipped": True, "reason": str(e)}\n')
+        assert not self.rule.check(f)
+
+    def test_ignores_non_web_str_exc_return(self, py_file):
+        """A bare script file with no web framework import must not trigger."""
+        f = py_file("    return str(e)\n")
         assert not self.rule.check(f)
 
 
