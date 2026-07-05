@@ -19,6 +19,7 @@ from .docker import (
     DockerPortExposureRule, DockerComposeEnvSecretRule,
     DockerPrivilegedRule, DockerHostNetworkRule,
     DockerSocketMountRule, DockerDangerousVolumeRule,
+    DockerAwsCredentialsMountRule,
 )
 from .dockerfile import (
     DockerfileEnvSecretRule, DockerfileRootUserRule, DockerfileLatestTagRule,
@@ -88,6 +89,7 @@ DEFAULT_RULES: list[Rule] = [
     DockerHostNetworkRule(),
     DockerSocketMountRule(),
     DockerDangerousVolumeRule(),
+    DockerAwsCredentialsMountRule(),
     # Dockerfile hardening
     DockerfileEnvSecretRule(),
     DockerfileRootUserRule(),
