@@ -64,6 +64,7 @@ from .deserialization import (
 )
 from .js_security import ProcessEnvFallbackRule, JsEvalNewFunctionRule
 from .swift import SwiftHardcodedSecretRule, SwiftPlainHttpRule, SwiftUserDefaultsSecretRule, SwiftSslBypassRule
+from .python import DebugBypassRule
 
 DEFAULT_RULES: list[Rule] = [
     # Secrets — hardcoded credentials
