@@ -284,3 +284,57 @@ class DockerDangerousVolumeRule(Rule):
                     fix=f"Remove the '{dangerous_path}' volume mount. Mounting system paths into containers allows privilege escalation and host filesystem modification. Use named Docker volumes or copy only the specific files needed.",
                 ))
         return findings
+
+
+class DockerAwsCredentialsMountRule(Rule):
+    """VGL-D007 — AWS credentials directory mounted into container.
+
+    Mounting ~/.aws exposes ALL profiles and access keys to every process
+    and package running inside the container — not just the one profile the
+    service actually needs. A supply-chain-compromised dependency can read
+    every project's credentials and exfiltrate them.
+
+    Confirmed gap (2026-07-05): found across mcp-trust-ledger, monitoring,
+    multimodel-harness, and shield-ecosystem in the FWSS workspace.
+    """
+
+    id = "VGL-D007"
+    name = "AWS credentials directory (~/.aws) mounted into container — exposes all profiles"
+    severity = Severity.HIGH
+
+    # Match volume source paths that are exactly the .aws directory (not a file inside it)
+    # Catches: ~/.aws:/dest  and  /home/user/.aws:/dest  but NOT  ~/.aws/scoped/file:/dest
+    _PAT = re.compile(r"""(?:~|/\S*)/\.aws\s*:""")
+
+    def applies_to(self, path: Path) -> bool:
+        return _is_compose(path)
+
+    def check(self, path: Path) -> list[Finding]:
+        try:
+            lines = path.read_text().splitlines()
+        except OSError:
+            return []
+        findings = []
+        for i, line in enumerate(lines, 1):
+            stripped = line.strip()
+            if "vigil: ignore" in line:
+                continue
+            if self._PAT.search(stripped):
+                findings.append(Finding(
+                    rule_id=self.id,
+                    severity=self.severity,
+                    message=(
+                        "Full AWS credentials directory mounted into container — "
+                        "exposes every profile's access keys to all packages in the image"
+                    ),
+                    file_path=path,
+                    line=i,
+                    snippet=stripped[:120],
+                    fix=(
+                        "Mount a scoped single-profile credentials file instead:\n"
+                        "  ~/.aws/scoped/<project>.credentials:/home/appuser/.aws/credentials:ro\n"
+                        "Create it with: awk '/^\\[profile-name\\]/{f=1} f && /^\\[/ && !/^\\[profile-name\\]/{exit} f{print}' "
+                        "~/.aws/credentials > ~/.aws/scoped/<project>.credentials"
+                    ),
+                ))
+        return findings

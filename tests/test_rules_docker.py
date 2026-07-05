@@ -3,6 +3,7 @@ from vigil.rules.docker import (
     DockerPortExposureRule, DockerComposeEnvSecretRule,
     DockerPrivilegedRule, DockerHostNetworkRule,
     DockerSocketMountRule, DockerDangerousVolumeRule,
+    DockerAwsCredentialsMountRule,
 )
 from vigil.rules.base import Severity
 
@@ -431,3 +432,97 @@ class TestDockerDangerousVolumeRule:
         f = tmp_path / "docker-compose.yml"
         f.write_text(_DANGEROUS_VOL_COMPOSE)
         assert self.rule.check(f)[0].rule_id == "VGL-D006"
+
+
+# ── VGL-D007 — AWS credentials directory mount ───────────────────────────────
+
+_AWS_MOUNT_TILDE = """\
+services:
+  api:
+    volumes:
+      - ~/.aws:/home/appuser/.aws:ro
+"""
+
+_AWS_MOUNT_ABSOLUTE = """\
+services:
+  api:
+    volumes:
+      - /home/ubuntu/.aws:/home/shield/.aws:ro
+"""
+
+_AWS_SCOPED_MOUNT = """\
+services:
+  api:
+    volumes:
+      - ~/.aws/scoped/myproject.credentials:/home/appuser/.aws/credentials:ro
+      - ~/.aws/scoped/myproject.config:/home/appuser/.aws/config:ro
+"""
+
+_AWS_IGNORE_COMMENT = """\
+services:
+  api:
+    volumes:
+      - ~/.aws:/home/appuser/.aws:ro  # vigil: ignore — legacy, migration in progress
+"""
+
+_NO_AWS_MOUNT = """\
+services:
+  api:
+    volumes:
+      - ./data:/data
+      - ./logs:/var/log/app
+"""
+
+
+class TestDockerAwsCredentialsMountRule:
+    rule = DockerAwsCredentialsMountRule()
+
+    def test_detects_tilde_aws_mount(self, tmp_path):
+        f = tmp_path / "docker-compose.yml"
+        f.write_text(_AWS_MOUNT_TILDE)
+        assert self.rule.check(f)
+
+    def test_detects_absolute_aws_mount(self, tmp_path):
+        f = tmp_path / "docker-compose.yml"
+        f.write_text(_AWS_MOUNT_ABSOLUTE)
+        assert self.rule.check(f)
+
+    def test_scoped_file_mount_not_flagged(self, tmp_path):
+        """Scoped single-profile files are the recommended fix — must not be flagged."""
+        f = tmp_path / "docker-compose.yml"
+        f.write_text(_AWS_SCOPED_MOUNT)
+        assert not self.rule.check(f)
+
+    def test_vigil_ignore_suppresses_finding(self, tmp_path):
+        f = tmp_path / "docker-compose.yml"
+        f.write_text(_AWS_IGNORE_COMMENT)
+        assert not self.rule.check(f)
+
+    def test_safe_volumes_not_flagged(self, tmp_path):
+        f = tmp_path / "docker-compose.yml"
+        f.write_text(_NO_AWS_MOUNT)
+        assert not self.rule.check(f)
+
+    def test_finding_is_high(self, tmp_path):
+        f = tmp_path / "docker-compose.yml"
+        f.write_text(_AWS_MOUNT_TILDE)
+        assert self.rule.check(f)[0].severity == Severity.HIGH
+
+    def test_finding_has_correct_rule_id(self, tmp_path):
+        f = tmp_path / "docker-compose.yml"
+        f.write_text(_AWS_MOUNT_TILDE)
+        assert self.rule.check(f)[0].rule_id == "VGL-D007"
+
+    def test_fix_mentions_scoped(self, tmp_path):
+        f = tmp_path / "docker-compose.yml"
+        f.write_text(_AWS_MOUNT_TILDE)
+        assert "scoped" in self.rule.check(f)[0].fix
+
+    def test_applies_to_compose_yml(self, tmp_path):
+        f = tmp_path / "docker-compose.yml"
+        f.write_text("")
+        assert self.rule.applies_to(f) is True
+
+    def test_does_not_apply_to_plain_yaml(self, tmp_path):
+        f = tmp_path / "values.yaml"
+        assert not self.rule.applies_to(f)
