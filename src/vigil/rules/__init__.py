@@ -190,6 +190,8 @@ DEFAULT_RULES: list[Rule] = [
     SwiftPlainHttpRule(),
     SwiftUserDefaultsSecretRule(),
     SwiftSslBypassRule(),
+    # Python security antipatterns
+    DebugBypassRule(),
 ]
 
 __all__ = [
