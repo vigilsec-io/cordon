@@ -72,9 +72,9 @@ class TestDebugBypassRule:
         assert not self.rule.check(f)
 
     def test_ignores_non_python_file(self, tmp_path):
+        """Extension check is the engine's job via applies_to, not check()."""
         f = tmp_path / "config.js"
-        f.write_text('SKIP_AUTH = true\n')
-        assert not self.rule.check(f)
+        assert not self.rule.applies_to(f)
 
     # ── finding metadata ─────────────────────────────────────────────────
 
