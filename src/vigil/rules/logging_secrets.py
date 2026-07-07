@@ -10,6 +10,15 @@ from .base import Finding, Rule, Severity
 
 _CODE_EXTS = {".py", ".js", ".ts", ".go", ".java", ".rb"}
 
+# Strip content of plain (non-f/non-r) string literals so "token" in an error message
+# doesn't fire, but token (the variable) and f"key: {token}" still do.
+_PLAIN_STR = re.compile(r'(?<![fFrRbBuU])(["\'])(?:(?!\1).)*?\1')
+
+
+def _strip_plain_literals(line: str) -> str:
+    return _PLAIN_STR.sub('""', line)
+
+
 # Security-sensitive variable names
 _SENSITIVE = re.compile(
     r"""\b(?:password|passwd|pwd|secret|api_key|apikey|auth_key|access_key|"""
