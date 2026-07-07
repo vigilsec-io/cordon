@@ -77,6 +77,20 @@ class TestLoggingSecretsRule:
         f = py_file("logger.info('Processing %d records', count)\n")
         assert not self.rule.check(f)
 
+    def test_ignores_sensitive_word_in_plain_string_literal(self, py_file):
+        # FP regression: error messages describing what's missing should not fire
+        f = py_file('print("ERROR: Gitea token not found in SSM")\n')
+        assert not self.rule.check(f)
+
+    def test_ignores_sensitive_word_in_plain_string_literal_logger(self, py_file):
+        f = py_file('logger.error("Missing password param — check config")\n')
+        assert not self.rule.check(f)
+
+    def test_detects_sensitive_var_in_fstring(self, py_file):
+        # f-strings interpolating a variable still fire
+        f = py_file('print(f"Auth failed, token={token}")\n')
+        assert self.rule.check(f)
+
     def test_ignores_comment_line(self, py_file):
         f = py_file("# logger.debug('password=%s', password)  — do not do this\n")
         assert not self.rule.check(f)
