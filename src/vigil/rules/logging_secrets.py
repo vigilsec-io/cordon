@@ -106,8 +106,10 @@ class LoggingSecretsRule(Rule):
             if not is_log_line:
                 continue
 
-            # Check if the logged value looks security-sensitive
-            if _SENSITIVE.search(line):
+            # Check if the logged value looks security-sensitive.
+            # Strip plain string literal content first so error messages containing
+            # words like "token" or "password" don't fire — only variable references do.
+            if _SENSITIVE.search(_strip_plain_literals(line)):
                 findings.append(Finding(
                     rule_id=self.id,
                     severity=self.severity,
