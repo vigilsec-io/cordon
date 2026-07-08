@@ -83,23 +83,23 @@ class TestSwiftHardcodedSecretRule:
         assert not self.rule.check(f)
 
     def test_ignores_cache_key_variable_name(self, sw):
-        f = sw('let cacheKey = "zora_search_cache_v2"\n')
+        f = sw('let cacheKey = "app_search_cache_v2"\n')
         assert not self.rule.check(f)
 
     def test_ignores_cache_store_key(self, sw):
-        f = sw('private static let cacheStoreKey = "zora_search_cache_v3"\n')
+        f = sw('private static let cacheStoreKey = "app_search_cache_v3"\n')
         assert not self.rule.check(f)
 
     def test_ignores_cache_value_in_non_cache_var(self, sw):
-        f = sw('let tsKey = "zora_feed_cache_ts_v2"\n')
+        f = sw('let tsKey = "app_feed_cache_ts_v2"\n')
         assert not self.rule.check(f)
 
     def test_ignores_snake_case_storage_key(self, sw):
-        f = sw('static let jwt      = "zora_jwt_token"\n')
+        f = sw('static let jwt      = "app_jwt_token"\n')
         assert not self.rule.check(f)
 
     def test_ignores_snake_case_user_id_key(self, sw):
-        f = sw('static let userID   = "zora_apple_user_id"\n')
+        f = sw('static let userID   = "app_apple_user_id"\n')
         assert not self.rule.check(f)
 
     def test_still_catches_real_jwt_secret(self, sw):

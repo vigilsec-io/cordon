@@ -288,10 +288,10 @@ pytest tests/ -v
 
 ---
 
-## Feedback & Waitlist
+## Feedback
 
 Found a false positive? Want a rule that doesn't exist yet? Building with AI agents and hitting patterns Vigil should catch?
 
-[Join the waitlist → thefwss.com/vigil](https://thefwss.com/vigil)
+[Open an issue → github.com/vigilsec-io/cordon/issues](https://github.com/vigilsec-io/cordon/issues)
 
 Or: `vigil feedback`

@@ -294,8 +294,8 @@ class DockerAwsCredentialsMountRule(Rule):
     service actually needs. A supply-chain-compromised dependency can read
     every project's credentials and exfiltrate them.
 
-    Confirmed gap (2026-07-05): found across mcp-trust-ledger, monitoring,
-    multimodel-harness, and shield-ecosystem in the FWSS workspace.
+    Confirmed gap: found in real production codebases where services needed
+    single-profile scoped credentials but were given the entire ~/.aws directory.
     """
 
     id = "VGL-D007"

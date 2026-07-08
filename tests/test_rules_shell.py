@@ -29,7 +29,7 @@ def test_does_not_apply_to_yml(tmp_path):
     assert rule.applies_to(tmp_path / "docker-compose.yml") is False
 
 
-# VGL-S011: SSH inline secret — the forge/deploy.sh pattern
+# VGL-S011: SSH inline secret — passing env vars inline to remote SSH commands
 def test_ssh_inline_secret_flagged(tmp_path):
     code = 'ssh host "DB_PASSWORD=\'$DB_PASSWORD\' alembic upgrade head"'  # vigil: ignore
     f = _f(tmp_path, code)
@@ -37,7 +37,7 @@ def test_ssh_inline_secret_flagged(tmp_path):
     assert any(fi.rule_id == "VGL-S011" for fi in findings)
 
 def test_ssh_inline_db_url_flagged(tmp_path):
-    code = "ssh user@host \"DB_URL='$FORGE_DB_URL' python3 migrate.py\""  # vigil: ignore
+    code = "ssh user@host \"DB_URL='$APP_DB_URL' python3 migrate.py\""  # vigil: ignore
     f = _f(tmp_path, code)
     assert rule.check(f) != []
 
@@ -66,7 +66,7 @@ def test_inline_env_secret_flagged(tmp_path):
 
 # Safe patterns — must not flag
 def test_ssm_fetch_not_flagged(tmp_path):
-    code = "DB_URL=$(aws ssm get-parameter --name /forge/db_url --with-decryption --query Parameter.Value --output text)"
+    code = "DB_URL=$(aws ssm get-parameter --name /myapp/db_url --with-decryption --query Parameter.Value --output text)"
     f = _f(tmp_path, code)
     assert rule.check(f) == []
 

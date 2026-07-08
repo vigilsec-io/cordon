@@ -79,7 +79,7 @@ class TestLoggingSecretsRule:
 
     def test_ignores_sensitive_word_in_plain_string_literal(self, py_file):
         # FP regression: error messages describing what's missing should not fire
-        f = py_file('print("ERROR: Gitea token not found in SSM")\n')
+        f = py_file('print("ERROR: auth token not found in config")\n')
         assert not self.rule.check(f)
 
     def test_ignores_sensitive_word_in_plain_string_literal_logger(self, py_file):

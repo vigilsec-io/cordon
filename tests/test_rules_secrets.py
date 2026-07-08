@@ -164,10 +164,10 @@ def test_insecure_environ_get_jwt_detected(tmp_path):
 
 
 def test_insecure_custom_getter_detected(tmp_path):
-    """Regression: cadre config.py pattern that triggered VGL-S011 addition."""
+    """Regression: config.py pattern with insecure hardcoded default that triggered VGL-S011 addition."""
     f = tmp_path / "config.py"
     f.write_text(
-        '        return self._get("CADRE_SECRET_KEY", "/cadre/secret_key", "dev-secret-key-change-in-prod")\n'
+        '        return self._get("APP_SECRET_KEY", "/app/secret_key", "dev-secret-key-change-in-prod")\n'
     )
     assert len(InsecureConfigDefaultRule().check(f)) == 1
 

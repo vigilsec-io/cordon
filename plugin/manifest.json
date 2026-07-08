@@ -2,7 +2,7 @@
   "name": "vigil",
   "version": "0.1.0",
   "description": "AI coding security co-pilot — blocks insecure IaC, secrets, and Dockerfile misconfigurations at AI generation time",
-  "author": "FWSS (prem.fwss@gmail.com)",
+  "author": "vigilsec",
   "license": "MIT",
   "keywords": ["security", "iac", "docker", "secrets", "linter", "devsecops"],
   "hooks": {

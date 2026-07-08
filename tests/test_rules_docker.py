@@ -174,14 +174,14 @@ services:
   db:
     image: postgres:16-alpine
     environment:
-      POSTGRES_DB: forge
-      POSTGRES_USER: forge
+      POSTGRES_DB: myapp
+      POSTGRES_USER: myapp
       POSTGRES_PASSWORD_FILE: /run/secrets/db_password
     secrets:
       - db_password
 secrets:
   db_password:
-    file: /home/ubuntu/forge/.db_password
+    file: /home/ubuntu/myapp/.db_password
 """
 
 _COMPOSE_DOCKER_SECRETS_LIST = """\
@@ -447,7 +447,7 @@ _AWS_MOUNT_ABSOLUTE = """\
 services:
   api:
     volumes:
-      - /home/ubuntu/.aws:/home/shield/.aws:ro
+      - /home/ubuntu/.aws:/home/appuser/.aws:ro
 """
 
 _AWS_SCOPED_MOUNT = """\

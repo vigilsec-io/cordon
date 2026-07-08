@@ -101,12 +101,12 @@ class TestFindingsLogRead:
     def test_project_filter(self, log_path):
         from vigil import findingslog
         self._write(log_path, [
-            {"ts": "2026-06-28T10:00:00+00:00", "rule": "VGL-S001", "severity": "HIGH", "file": "/cadre/api.py", "title": "", "detail": ""},
-            {"ts": "2026-06-28T10:00:00+00:00", "rule": "VGL-S002", "severity": "HIGH", "file": "/scout/main.py", "title": "", "detail": ""},
+            {"ts": "2026-06-28T10:00:00+00:00", "rule": "VGL-S001", "severity": "HIGH", "file": "/myapp/api.py", "title": "", "detail": ""},
+            {"ts": "2026-06-28T10:00:00+00:00", "rule": "VGL-S002", "severity": "HIGH", "file": "/other/main.py", "title": "", "detail": ""},
         ])
-        result = findingslog.read(project="cadre")
+        result = findingslog.read(project="myapp")
         assert len(result) == 1
-        assert "cadre" in result[0]["file"]
+        assert "myapp" in result[0]["file"]
 
     def test_severity_filter(self, log_path):
         from vigil import findingslog

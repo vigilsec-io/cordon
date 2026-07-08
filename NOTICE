@@ -2,7 +2,7 @@ Vigil
 Copyright (c) 2026 Prem Kumar Akula. All rights reserved.
 
 Created: 2026-06-26
-Author: Prem Kumar Akula <prem.fwss@gmail.com>
+Author: Prem Kumar Akula
 
 This software and all associated ideas, algorithms, rule definitions,
 and product concepts are the exclusive intellectual property of
@@ -13,4 +13,4 @@ The VGL-D001 rule (docker-compose port binding to 0.0.0.0 without
 by any known IaC scanning tool as of the creation date above.
 
 Commercial use requires a separate license agreement.
-Contact: prem.fwss@gmail.com
+Contact: https://github.com/vigilsec-io/cordon/issues

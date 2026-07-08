@@ -243,7 +243,7 @@ def main() -> None:
     )
 
     log_p = sub.add_parser("log", help="Show persistent findings log (~/.vigil/findings.jsonl)")
-    log_p.add_argument("--project", default=None, help="Filter by path prefix (e.g. 'cadre', 'scout')")
+    log_p.add_argument("--project", default=None, help="Filter by path prefix (e.g. 'api', 'backend')")
     log_p.add_argument("--severity", choices=[s.value for s in Severity], default=None, help="Filter by severity")
     log_p.add_argument("--since", default=None, metavar="DATE", help="Filter by date, e.g. 2026-06-28")
     log_p.add_argument("--limit", type=int, default=20, help="Max rows to show (default: 20)")
@@ -255,9 +255,8 @@ def main() -> None:
         sys.exit(0)
 
     if args.command == "feedback":
-        url = "https://thefwss.com/vigil"
+        url = "https://github.com/vigilsec-io/cordon/issues"
         print(f"Opening {url}")
-        print("Or email: prem.fwss@gmail.com")
         webbrowser.open(url)
         return
 
@@ -317,7 +316,7 @@ def main() -> None:
             _dim = "\033[2m" if not args.no_color else ""
             _rst = "\033[0m" if not args.no_color else ""
             print(
-                f"{_dim}── Vigil · feedback & waitlist → thefwss.com/vigil ──{_rst}",
+                f"{_dim}── Vigil · github.com/vigilsec-io/cordon ──{_rst}",
                 file=sys.stderr,
             )
 

@@ -9,15 +9,15 @@ description = "AI coding security co-pilot — blocks insecure code at generatio
 readme = "README.md"
 license = "BUSL-1.1"
 license-files = ["LICENSE"]
-authors = [{name = "Prem Kumar Akula", email = "prem.fwss@gmail.com"}]
+authors = [{name = "Prem Kumar Akula"}]
 requires-python = ">=3.11"
 dependencies = []
 keywords = ["security", "devsecops", "docker", "ai", "claude", "static-analysis", "linter"]
 
 [project.urls]
-Homepage = "https://thefwss.com/vigil"
+Homepage = "https://github.com/vigilsec-io/cordon"
 Source = "https://github.com/vigilsec-io/cordon"
-Feedback = "https://thefwss.com/vigil"
+Issues = "https://github.com/vigilsec-io/cordon/issues"
 
 [project.scripts]
 vigil = "vigil.cli:main"
