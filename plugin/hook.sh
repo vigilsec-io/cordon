@@ -40,10 +40,5 @@ if [ -n "$VIGIL" ]; then
     exit $?
 fi
 
-# Fallback: shared/scan.sh (workspace install without pip install)
-SCAN_SH="$(cd "$(dirname "$0")/../.." && pwd)/shared/scan.sh"
-if [ -f "$SCAN_SH" ] && [ -x "$SCAN_SH" ]; then
-    exec "$SCAN_SH"
-fi
-
+# vigil not found — install with: pip install vigilsec && vigil init
 exit 0
