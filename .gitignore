@@ -30,15 +30,3 @@ secrets.toml
 .pytest_cache/
 htmlcov/
 .coverage
-
-# Workspace-internal files (never committed to git)
-CLAUDE.md
-ACTIVE_TASK.md
-PRODUCT_VISION.md
-CATCHES.md
-.gitea/
-vigil-vscode/
-docs/case-studies/
-docs/MEDIUM_ARTICLE.md
-docs/MEDIUM_ARTICLE.html
-docs/PROJECT_STATE.md
