@@ -1,9 +1,10 @@
-"""Tests for GitHub Actions advanced security rules: VGL-GHA001-002, GHA004-008."""
+"""Tests for GitHub Actions advanced security rules: VGL-GHA001-002, GHA004-010."""
 import pytest
 from vigil.rules.gha import (
     GhaPwnRequestRule, GhaScriptInjectionRule, GhaSecretsInRunRule,
     GhaMissingPermissionsRule, GhaCachePoisoningRule,
     GhaSelfHostedOnPrRule, GhaWorkflowRunNoRefRule,
+    GhaAiAgentUntrustedTriggerRule, GhaAiAgentForkGuardRule,
 )
 from vigil.rules.base import Severity
 
@@ -445,6 +446,234 @@ class TestGhaWorkflowRunNoRefRule:
         f = self.rule.check(wf(_WR_NO_REF))
         assert "head_branch" in f[0].fix
 
-    def test_does_not_apply_to_non_yml(self, tmp_path):
+    def test_does_not_apply_to_non_yml_gha008(self, tmp_path):
         f = tmp_path / "workflow.py"
         assert not self.rule.applies_to(f)
+
+
+# ── VGL-GHA009 — AI agent on untrusted-input trigger ─────────────────────────
+
+_AI_ISSUES_TRIGGER = """\
+name: AI Review
+on:
+  issues:
+    types: [opened]
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - run: claude --print "Review this issue"
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+"""
+
+_AI_ISSUE_COMMENT_TRIGGER = """\
+name: AI Comment Handler
+on:
+  issue_comment:
+    types: [created]
+jobs:
+  respond:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: anthropics/claude-code-action@v1
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+"""
+
+_AI_GEMINI_ISSUES = """\
+name: Gemini Review
+on:
+  issues:
+    types: [opened]
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - run: gemini --prompt "Review issue"
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+"""
+
+_AI_PUSH_TRIGGER = """\
+name: AI on Push
+on:
+  push:
+    branches: [main]
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - run: claude --print "Review commit"
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+"""
+
+_AI_NO_KEY = """\
+name: Agent without key
+on:
+  issues:
+    types: [opened]
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "no claude here"
+"""
+
+_AI_IGNORED = """\
+name: AI Review
+on:
+  issues:  # vigil: ignore — internal org only, monitored
+    types: [opened]
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - run: claude --print "Review"
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+"""
+
+
+class TestGhaAiAgentUntrustedTriggerRule:
+    rule = GhaAiAgentUntrustedTriggerRule()
+
+    def test_detects_claude_on_issues(self, wf):
+        assert self.rule.check(wf(_AI_ISSUES_TRIGGER))
+
+    def test_detects_claude_code_action_on_issue_comment(self, wf):
+        assert self.rule.check(wf(_AI_ISSUE_COMMENT_TRIGGER))
+
+    def test_detects_gemini_on_issues(self, wf):
+        assert self.rule.check(wf(_AI_GEMINI_ISSUES))
+
+    def test_push_trigger_not_flagged(self, wf):
+        assert not self.rule.check(wf(_AI_PUSH_TRIGGER))
+
+    def test_no_ai_key_not_flagged(self, wf):
+        assert not self.rule.check(wf(_AI_NO_KEY))
+
+    def test_vigil_ignore_suppresses(self, wf):
+        assert not self.rule.check(wf(_AI_IGNORED))
+
+    def test_finding_is_critical(self, wf):
+        assert self.rule.check(wf(_AI_ISSUES_TRIGGER))[0].severity == Severity.CRITICAL
+
+    def test_finding_has_correct_rule_id(self, wf):
+        assert self.rule.check(wf(_AI_ISSUES_TRIGGER))[0].rule_id == "VGL-GHA009"
+
+    def test_fix_mentions_author_association(self, wf):
+        assert "author_association" in self.rule.check(wf(_AI_ISSUES_TRIGGER))[0].fix
+
+    def test_fix_mentions_comment_and_control(self, wf):
+        assert "Comment and Control" in self.rule.check(wf(_AI_ISSUES_TRIGGER))[0].fix
+
+    def test_does_not_apply_to_non_yml(self, tmp_path):
+        assert not self.rule.applies_to(tmp_path / "main.py")
+
+
+# ── VGL-GHA010 — AI agent on pull_request_target without fork guard ───────────
+
+_AI_PPT_NO_GUARD = """\
+name: AI PR Review
+on:
+  pull_request_target:
+    types: [opened, synchronize]
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - run: claude --print "Review this PR"
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+"""
+
+_AI_PPT_WITH_REPO_GUARD = """\
+name: AI PR Review Guarded
+on:
+  pull_request_target:
+    types: [opened]
+jobs:
+  review:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - run: claude --print "Review this PR"
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+"""
+
+_AI_PPT_WITH_AUTHOR_GUARD = """\
+name: AI PR Review Guarded by Author
+on:
+  pull_request_target:
+    types: [opened]
+jobs:
+  review:
+    if: contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.pull_request.author_association)
+    runs-on: ubuntu-latest
+    steps:
+      - run: claude --print "Review"
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+"""
+
+_AI_PR_NOT_TARGET = """\
+name: AI Review on PR
+on:
+  pull_request:
+    types: [opened]
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - run: claude --print "Review"
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+"""
+
+_AI_PPT_IGNORED = """\
+name: AI PR Review
+on:
+  pull_request_target:  # vigil: ignore — restricted to org members via branch protection
+    types: [opened]
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - run: claude --print "Review"
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+"""
+
+
+class TestGhaAiAgentForkGuardRule:
+    rule = GhaAiAgentForkGuardRule()
+
+    def test_detects_ppt_without_guard(self, wf):
+        assert self.rule.check(wf(_AI_PPT_NO_GUARD))
+
+    def test_repo_full_name_guard_clears(self, wf):
+        assert not self.rule.check(wf(_AI_PPT_WITH_REPO_GUARD))
+
+    def test_author_association_guard_clears(self, wf):
+        assert not self.rule.check(wf(_AI_PPT_WITH_AUTHOR_GUARD))
+
+    def test_plain_pull_request_not_flagged(self, wf):
+        assert not self.rule.check(wf(_AI_PR_NOT_TARGET))
+
+    def test_vigil_ignore_suppresses(self, wf):
+        assert not self.rule.check(wf(_AI_PPT_IGNORED))
+
+    def test_finding_is_high(self, wf):
+        assert self.rule.check(wf(_AI_PPT_NO_GUARD))[0].severity == Severity.HIGH
+
+    def test_finding_has_correct_rule_id(self, wf):
+        assert self.rule.check(wf(_AI_PPT_NO_GUARD))[0].rule_id == "VGL-GHA010"
+
+    def test_fix_mentions_fork_guard(self, wf):
+        assert "head.repo" in self.rule.check(wf(_AI_PPT_NO_GUARD))[0].fix
+
+    def test_does_not_apply_to_non_yml(self, tmp_path):
+        assert not self.rule.applies_to(tmp_path / "config.py")

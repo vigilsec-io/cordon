@@ -6,6 +6,8 @@ VGL-GHA005  MEDIUM    No permissions: block (implicit permissive GITHUB_TOKEN)
 VGL-GHA006  HIGH      actions/cache in pull_request workflow (cache poisoning)
 VGL-GHA007  HIGH      Self-hosted runner with pull_request trigger (persistent runner risk)
 VGL-GHA008  HIGH      workflow_run trigger without head_branch/head_repository validation
+VGL-GHA009  CRITICAL  AI agent wired to untrusted-input trigger (issues/issue_comment/pull_request_target) + API key in env
+VGL-GHA010  HIGH      AI agent on pull_request_target without fork origin guard
 """
 import re
 from pathlib import Path
@@ -412,6 +414,180 @@ class GhaWorkflowRunNoRefRule(Rule):
                         "AND github.event.workflow_run.head_repository.full_name == github.repository. "
                         "Without this, an attacker triggering the upstream workflow from a fork "
                         "gains access to production secrets and GITHUB_TOKEN in this workflow."
+                    ),
+                )]
+        return []
+
+
+# ── VGL-GHA009 — AI agent on untrusted-input trigger ─────────────────────────
+
+class GhaAiAgentUntrustedTriggerRule(Rule):
+    """VGL-GHA009 — AI coding agent wired to issues/issue_comment/pull_request_target
+    while holding an AI API key in the environment.
+
+    This is the exact architecture exploited in "Comment and Control" (April 2026,
+    CVSS 9.4): attackers embed hidden instructions in HTML comments inside GitHub
+    issues/PRs — invisible to human reviewers, fully parsed by the AI agent.
+    The agent executes `ps auxeww | base64` and commits stolen credentials to a PR.
+
+    Confirmed stolen in real attacks: ANTHROPIC_API_KEY, GITHUB_TOKEN,
+    GEMINI_API_KEY, GITHUB_COPILOT_API_TOKEN, COPILOT_JOB_NONCE.
+    """
+
+    id = "VGL-GHA009"
+    name = "AI agent wired to untrusted-input trigger (issues/pull_request_target) with API key in env"
+    severity = Severity.CRITICAL
+
+    # Triggers that accept fully attacker-controlled content
+    _DANGEROUS_TRIGGERS = re.compile(
+        r"^\s*(?:issues|issue_comment|pull_request_target)\s*:",
+        re.MULTILINE,
+    )
+
+    # AI agent CLI invocations or known action slugs
+    _AI_AGENT = re.compile(
+        r"""(?x)
+        \bclaude\b          # Claude Code CLI
+        | \bgemini\b        # Gemini CLI
+        | anthropics?/claude-code-action
+        | google-github-actions/gemini-cli-action
+        | github/copilot-action
+        | copilot-swe-agent
+        """,
+        re.IGNORECASE,
+    )
+
+    # AI API keys wired into the workflow environment
+    _API_KEY = re.compile(
+        r"ANTHROPIC_API_KEY|GEMINI_API_KEY|COPILOT_API_KEY|OPENAI_API_KEY",
+        re.IGNORECASE,
+    )
+
+    def applies_to(self, path: Path) -> bool:
+        return path.suffix in _GH_EXTS
+
+    def check(self, path: Path) -> list[Finding]:
+        try:
+            content = path.read_text(errors="ignore")
+        except (OSError, PermissionError):
+            return []
+        if not _is_gha(path, content):
+            return []
+        if not self._DANGEROUS_TRIGGERS.search(content):
+            return []
+        if not self._AI_AGENT.search(content):
+            return []
+        if not self._API_KEY.search(content):
+            return []
+
+        # Report on the first dangerous trigger line
+        for i, line in enumerate(content.splitlines(), 1):
+            if "vigil: ignore" in line:
+                continue
+            if re.search(r"^\s*(?:issues|issue_comment|pull_request_target)\s*:", line):
+                return [Finding(
+                    rule_id=self.id,
+                    severity=self.severity,
+                    message=(
+                        "AI agent wired to untrusted-input trigger — "
+                        "attacker can embed hidden instructions in issues/PRs (HTML comments, "
+                        "invisible to humans) and hijack the agent to exfiltrate API keys via "
+                        "ps auxeww|base64, bypassing GitHub secret scanning"
+                    ),
+                    file_path=path,
+                    line=i,
+                    snippet=line.strip()[:120],
+                    fix=(
+                        "1. Add actor guard: if: contains(fromJSON('[\"OWNER\",\"MEMBER\",\"COLLABORATOR\"]'), "
+                        "github.event.issue.author_association) — blocks external attacker issues from triggering. "
+                        "2. Use --allowedTools to restrict agent to read-only operations. "
+                        "3. Set permissions: {contents: read} — write GITHUB_TOKEN is not needed for review. "
+                        "4. Never pass github.event.issue.body or PR titles directly into agent prompts. "
+                        "Reference: 'Comment and Control' (CVSS 9.4, April 2026) — Claude Code, Gemini CLI, "
+                        "and Copilot Agent all confirmed exploited via this pattern."
+                    ),
+                )]
+        return []
+
+
+# ── VGL-GHA010 — AI agent on pull_request_target without fork guard ───────────
+
+class GhaAiAgentForkGuardRule(Rule):
+    """VGL-GHA010 — AI agent triggered via pull_request_target without a fork
+    origin check. pull_request_target runs with write GITHUB_TOKEN even for PRs
+    from external forks. Without a guard, any stranger opening a PR auto-triggers
+    the agent with full secret access and attacker-controlled content.
+
+    Companion to VGL-GHA009 — specifically the pull_request_target variant,
+    which is the most dangerous because it combines write scope + fork PRs.
+    """
+
+    id = "VGL-GHA010"
+    name = "AI agent on pull_request_target without fork origin guard"
+    severity = Severity.HIGH
+
+    _PPT = re.compile(r"\bpull_request_target\b")
+    _AI_AGENT = re.compile(
+        r"""(?x)
+        \bclaude\b
+        | \bgemini\b
+        | anthropics?/claude-code-action
+        | google-github-actions/gemini-cli-action
+        | github/copilot-action
+        | copilot-swe-agent
+        """,
+        re.IGNORECASE,
+    )
+    # Fork origin guard patterns
+    _FORK_GUARD = re.compile(
+        r"""(?x)
+        head\.repo(?:sitory)?\.full_name\s*==\s*github\.repository   # repo match
+        | author_association                                           # role check
+        | pull_request\.user\.login                                   # explicit user check
+        """,
+        re.IGNORECASE,
+    )
+
+    def applies_to(self, path: Path) -> bool:
+        return path.suffix in _GH_EXTS
+
+    def check(self, path: Path) -> list[Finding]:
+        try:
+            content = path.read_text(errors="ignore")
+        except (OSError, PermissionError):
+            return []
+        if not _is_gha(path, content):
+            return []
+        if not self._PPT.search(content):
+            return []
+        if not self._AI_AGENT.search(content):
+            return []
+        if self._FORK_GUARD.search(content):
+            return []  # guard is present
+
+        for i, line in enumerate(content.splitlines(), 1):
+            if "vigil: ignore" in line:
+                continue
+            if re.search(r"\bpull_request_target\b", line):
+                return [Finding(
+                    rule_id=self.id,
+                    severity=self.severity,
+                    message=(
+                        "AI agent on pull_request_target without fork origin guard — "
+                        "any external contributor's PR auto-triggers the agent with write "
+                        "GITHUB_TOKEN and attacker-controlled PR content"
+                    ),
+                    file_path=path,
+                    line=i,
+                    snippet=line.strip()[:120],
+                    fix=(
+                        "Add a job-level if guard: "
+                        "if: github.event.pull_request.head.repo.full_name == github.repository "
+                        "|| contains(fromJSON('[\"OWNER\",\"MEMBER\",\"COLLABORATOR\"]'), "
+                        "github.event.pull_request.author_association). "
+                        "This prevents fork PRs from auto-triggering the agent. "
+                        "For external PRs, require a maintainer to manually trigger the review "
+                        "after inspecting the PR content."
                     ),
                 )]
         return []

@@ -53,6 +53,7 @@ from .gha import (
     GhaPwnRequestRule, GhaScriptInjectionRule, GhaSecretsInRunRule,
     GhaMissingPermissionsRule, GhaCachePoisoningRule,
     GhaSelfHostedOnPrRule, GhaWorkflowRunNoRefRule,
+    GhaAiAgentUntrustedTriggerRule, GhaAiAgentForkGuardRule,
 )
 from .xss import XssRule
 from .auth import JwtAlgorithmNoneRule, JwtVerifyDisabledRule, WeakSecretKeyRule, DebugModeEnabledRule
@@ -161,6 +162,8 @@ DEFAULT_RULES: list[Rule] = [
     GhaCachePoisoningRule(),
     GhaSelfHostedOnPrRule(),
     GhaWorkflowRunNoRefRule(),
+    GhaAiAgentUntrustedTriggerRule(),
+    GhaAiAgentForkGuardRule(),
     # Cross-Site Scripting
     XssRule(),
     # Broken authentication
