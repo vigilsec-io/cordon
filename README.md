@@ -73,6 +73,21 @@ vigil feedback
 
 ---
 
+## See It in Action
+
+**Blocking a vulnerable GitHub Actions workflow at write time:**
+
+<!-- GIF: terminal showing claude writing ai-review.yml → vigil hook fires → BLOCKED + VGL-GHA009 CRITICAL → fix applied → clean -->
+![Vigil blocking Comment and Control attack](docs/demo-gha.gif)
+
+In April 2026, researchers found that all three major AI coding agents (Claude Code, Gemini CLI, Copilot) could be hijacked to exfiltrate `ANTHROPIC_API_KEY` and `GITHUB_TOKEN` via a hidden HTML comment in a GitHub issue. CVSS 9.4. No special access required.
+
+Vigil catches the vulnerable workflow (`issues:` trigger + AI agent + API key in env) before it reaches git — the only tool that does.
+
+→ [Full writeup: The Attack That Steals Your API Keys Through a GitHub Issue Comment](https://medium.com/@rjbdjnf/the-attack-that-steals-your-api-keys-through-a-github-issue-comment-b0301c1906dc)
+
+---
+
 ## Rules
 
 36 rules across 9 categories. All built-in, stdlib-only, zero runtime dependencies.
