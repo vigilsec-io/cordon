@@ -1,0 +1,49 @@
+name: Bug report / False positive
+description: Vigil flagged something it shouldn't, missed something it should, or crashed
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Security vulnerabilities in Vigil itself do not belong here.**
+        Use [private vulnerability reporting](https://github.com/vigilsec-io/cordon/security/advisories/new).
+        False positives and false negatives are correctness bugs — they belong here, and they are welcome.
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What kind of bug?
+      options:
+        - False positive (flagged something safe)
+        - False negative (missed something unsafe)
+        - Crash or error
+        - Wrong / unhelpful fix text
+        - Other
+    validations: {required: true}
+  - type: input
+    id: rule
+    attributes:
+      label: Rule ID
+      placeholder: VGL-D001
+  - type: textarea
+    id: snippet
+    attributes:
+      label: Minimal snippet
+      description: The smallest input that reproduces this. **Redact any real secrets, hostnames or internal paths.**
+      render: yaml
+    validations: {required: true}
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected vs what happened
+    validations: {required: true}
+  - type: textarea
+    id: output
+    attributes:
+      label: Vigil output
+      description: Output of `vigil scan <path>`. Redact anything sensitive.
+      render: shell
+  - type: input
+    id: version
+    attributes:
+      label: Vigil version / commit
+    validations: {required: true}
