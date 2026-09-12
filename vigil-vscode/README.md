@@ -35,7 +35,7 @@ The correct form is `"127.0.0.1:5432:5432"`. Valca catches it instantly on save.
 Install the CLI first:
 
 ```bash
-pip install vigilsec
+pip install valca
 ```
 
 That's it. The extension auto-detects the `vigil` binary.
@@ -97,8 +97,8 @@ Open Command Palette (`Cmd+Shift+P`):
 
 ## License
 
-[BUSL 1.1](https://github.com/vigilsec/vigil/blob/main/LICENSE) — free for non-commercial use. Converts to MIT in 2030.
+[BUSL 1.1](https://github.com/vigilsec-io/cordon/blob/main/LICENSE) — free for non-commercial use. Converts to MIT in 2030.
 
 ---
 
-[Issues & feedback](https://github.com/vigilsec-io/cordon/issues) · [PyPI](https://pypi.org/project/vigilsec/)
+[Issues & feedback](https://github.com/vigilsec-io/cordon/issues) · [PyPI](https://pypi.org/project/valca/)

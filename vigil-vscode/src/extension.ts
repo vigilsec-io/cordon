@@ -6,7 +6,7 @@ import * as path from 'path';
 
 const execFileAsync = promisify(execFile);
 
-interface VigilFinding {
+interface ValcaFinding {
   rule_id: string;
   severity: string;
   message: string;
@@ -35,12 +35,15 @@ const VIGIL_CANDIDATES = [
   path.join(os.homedir(), '.pyenv', 'versions', '3.11.0', 'bin', 'vigil'),
   path.join(os.homedir(), '.pyenv', 'shims', 'vigil'),
   '/usr/local/bin/vigil',
-  '/opt/homebrew/bin/vigil',
+  'valca',
+    '/opt/homebrew/bin/valca',
+    '/usr/local/bin/valca',
+    '/opt/homebrew/bin/vigil',
 ];
 
 let resolvedExecutable: string | null = null;
 
-async function findVigilExecutable(): Promise<string> {
+async function findValcaExecutable(): Promise<string> {
   const configured = vscode.workspace
     .getConfiguration('vigil')
     .get<string>('executablePath', '');
@@ -60,7 +63,7 @@ async function findVigilExecutable(): Promise<string> {
   return 'vigil';
 }
 
-function parseFindings(raw: string): VigilFinding[] {
+function parseFindings(raw: string): ValcaFinding[] {
   try {
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed : [];
@@ -71,7 +74,7 @@ function parseFindings(raw: string): VigilFinding[] {
 
 function updateDiagnostics(
   uri: vscode.Uri,
-  findings: VigilFinding[],
+  findings: ValcaFinding[],
   collection: vscode.DiagnosticCollection,
   minSeverity: string
 ): void {
@@ -102,22 +105,22 @@ function updateDiagnostics(
 
 function updateStatusBar(
   statusBar: vscode.StatusBarItem,
-  findings: VigilFinding[]
+  findings: ValcaFinding[]
 ): void {
   const blocking = findings.filter(
     (f) => f.severity === 'CRITICAL' || f.severity === 'HIGH'
   );
 
   if (findings.length === 0) {
-    statusBar.text = '$(shield) Vigil';
-    statusBar.tooltip = 'Vigil: no findings';
+    statusBar.text = '$(shield) Valca';
+    statusBar.tooltip = 'Valca: no findings';
     statusBar.backgroundColor = undefined;
   } else if (blocking.length > 0) {
-    statusBar.text = `$(error) Vigil: ${blocking.length} CRITICAL/HIGH`;
+    statusBar.text = `$(error) Valca: ${blocking.length} CRITICAL/HIGH`;
     statusBar.tooltip = `${blocking.length} blocking finding(s) — click to scan`;
     statusBar.backgroundColor = new vscode.ThemeColor('statusBarItem.errorBackground');
   } else {
-    statusBar.text = `$(warning) Vigil: ${findings.length} advisory`;
+    statusBar.text = `$(warning) Valca: ${findings.length} advisory`;
     statusBar.tooltip = `${findings.length} MEDIUM/LOW finding(s) — click to scan`;
     statusBar.backgroundColor = new vscode.ThemeColor('statusBarItem.warningBackground');
   }
@@ -136,9 +139,9 @@ async function scanFile(
   }
 
   const minSeverity = config.get<string>('minSeverity', 'HIGH');
-  const vigil = await findVigilExecutable();
+  const vigil = await findValcaExecutable();
 
-  let findings: VigilFinding[] = [];
+  let findings: ValcaFinding[] = [];
   try {
     const { stdout } = await execFileAsync(vigil, [
       'scan', doc.uri.fsPath, '--format', 'json',
@@ -150,8 +153,8 @@ async function scanFile(
       findings = parseFindings(err.stdout);
     } else {
       // vigil not found or crashed — show install hint once
-      statusBar.text = '$(alert) Vigil: not found';
-      statusBar.tooltip = 'Run: pip install vigilsec';
+      statusBar.text = '$(alert) Valca: not found';
+      statusBar.tooltip = 'Run: pip install valca';
       statusBar.backgroundColor = undefined;
       statusBar.show();
       diagnostics.delete(doc.uri);
@@ -169,7 +172,7 @@ async function scanWorkspace(
 ): Promise<void> {
   const config = vscode.workspace.getConfiguration('vigil');
   const minSeverity = config.get<string>('minSeverity', 'HIGH');
-  const vigil = await findVigilExecutable();
+  const vigil = await findValcaExecutable();
   const folders = vscode.workspace.workspaceFolders;
   if (!folders?.length) return;
 
@@ -177,7 +180,7 @@ async function scanWorkspace(
   let total = 0;
 
   for (const folder of folders) {
-    let findings: VigilFinding[] = [];
+    let findings: ValcaFinding[] = [];
     try {
       const { stdout } = await execFileAsync(vigil, [
         'scan', folder.uri.fsPath, '--format', 'json',
@@ -188,7 +191,7 @@ async function scanWorkspace(
     }
 
     // Group by file and update diagnostics per file
-    const byFile = new Map<string, VigilFinding[]>();
+    const byFile = new Map<string, ValcaFinding[]>();
     for (const f of findings) {
       const arr = byFile.get(f.file) ?? [];
       arr.push(f);
@@ -202,7 +205,7 @@ async function scanWorkspace(
 
   updateStatusBar(statusBar, []);
   const label = total === 0 ? 'no findings' : `${total} finding(s)`;
-  vscode.window.showInformationMessage(`Vigil: workspace scan complete — ${label}`);
+  vscode.window.showInformationMessage(`Valca: workspace scan complete — ${label}`);
 }
 
 export function activate(context: vscode.ExtensionContext): void {
