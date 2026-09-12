@@ -492,7 +492,7 @@ Add Valca to any CI pipeline — copy `vigil-action/workflow-template.yml` into 
 - name: Upload SARIF to GitHub Code Scanning
   uses: github/codeql-action/upload-sarif@v3
   with:
-    sarif_file: vigil-results.sarif
+    sarif_file: valca-results.sarif
 ```
 
 Findings appear as inline annotations on PR diffs in the GitHub Security tab.

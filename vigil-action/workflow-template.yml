@@ -35,11 +35,11 @@ jobs:
 
       - name: Generate SARIF report
         if: always()
-        run: valca scan . --format sarif > vigil-results.sarif
+        run: valca scan . --format sarif > valca-results.sarif
 
       - name: Upload SARIF to GitHub Code Scanning
         if: always()
         uses: github/codeql-action/upload-sarif@v3
         with:
-          sarif_file: vigil-results.sarif
+          sarif_file: valca-results.sarif
           category: vigil
