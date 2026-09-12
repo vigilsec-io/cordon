@@ -99,7 +99,23 @@ def report_terminal(findings: list[Finding], use_color: bool = True) -> None:
         )
 
 
-def report_sarif(results: dict[Path, list[Finding]], tool_version: str = "0.1.0") -> str:
+
+def _tool_version() -> str:
+    """Real package version, so SARIF does not misreport the tool that produced it.
+
+    GitHub code scanning records tool.driver.version against every alert; a
+    hardcoded default silently attributes today's findings to an old release.
+    """
+    try:
+        from importlib.metadata import version
+
+        return version("valca")
+    except Exception:  # noqa: BLE001
+        return "0.0.0"
+
+
+def report_sarif(results: dict[Path, list[Finding]], tool_version: str | None = None) -> str:
+    tool_version = tool_version or _tool_version()
     all_findings = [f for fs in results.values() for f in fs]
     rule_index: dict[str, int] = {}
     for f in all_findings:
@@ -136,7 +152,7 @@ def report_sarif(results: dict[Path, list[Finding]], tool_version: str = "0.1.0"
         "runs": [{
             "tool": {
                 "driver": {
-                    "name": "vigil",
+                    "name": "valca",
                     "version": tool_version,
                     "informationUri": "https://pypi.org/project/vigilsec",
                     "rules": sarif_rules,

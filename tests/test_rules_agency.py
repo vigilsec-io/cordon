@@ -113,7 +113,7 @@ def test_engine_inline_ignore_suppresses_finding(tmp_path):
     """Lines with '# vigil: ignore' must not produce findings."""
     from valca.engine import Engine
     from valca.rules.agency import AutoApprovalBypassRule
-    engine = Engine(rules=[AutoApprovalBypassRule()])
+    engine = Engine(rules=[AutoApprovalBypassRule()], telemetry_enabled=False)
     f = tmp_path / "agent.py"
     f.write_text("auto_approve = True  # vigil: ignore")
     findings = engine.scan(f)
