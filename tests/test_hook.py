@@ -49,17 +49,38 @@ def _run_hook(file_path: Path, extra_env: dict | None = None) -> subprocess.Comp
     )
 
 
+def _working_executable() -> str | None:
+    """Return a scanner that actually runs.
+
+    Presence on PATH is not enough: a stale entry-point script from an earlier
+    install stays executable but fails to import. That is the same trap the hook
+    itself guards against, so the test guard must apply it too — otherwise these
+    tests run against a broken binary and fail for the wrong reason.
+    """
+    candidates = [
+        shutil.which("valca"),
+        shutil.which("vigil"),
+        str(REPO_ROOT / "venv" / "bin" / "valca"),
+        str(REPO_ROOT / "venv" / "bin" / "vigil"),
+    ]
+    for candidate in candidates:
+        if not candidate or not Path(candidate).exists():
+            continue
+        try:
+            proc = subprocess.run(
+                [candidate, "--help"], capture_output=True, timeout=15, check=False
+            )
+        except (OSError, subprocess.SubprocessError):
+            continue
+        if proc.returncode == 0:
+            return candidate
+    return None
+
+
 @pytest.fixture(autouse=True)
 def _skip_if_no_venv_vigil():
-    if not (
-        shutil.which("valca")
-        or shutil.which("vigil")
-        or (REPO_ROOT / "venv" / "bin" / "valca").exists()
-        or (REPO_ROOT / "venv" / "bin" / "vigil").exists()
-    ):
-        pytest.skip(
-            "no valca/vigil executable available — run `pip install -e .` first"
-        )
+    if _working_executable() is None:
+        pytest.skip("no working valca/vigil executable — run `pip install -e .` first")
 
 
 def test_vulnerable_file_inside_project_blocks(tmp_path):
