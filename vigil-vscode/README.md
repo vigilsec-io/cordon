@@ -42,7 +42,7 @@ That's it. The extension auto-detects the `vigil` binary.
 
 ---
 
-## What It Catches (36 rules)
+## What It Catches (102 rules)
 
 - **Docker** — `"PORT:PORT"` bindings that bypass UFW and expose services to the internet
 - **Secrets** — hardcoded AWS keys, passwords, JWT secrets, Stripe keys, Slack tokens, PEM keys

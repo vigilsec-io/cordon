@@ -118,100 +118,268 @@ Vigil catches the vulnerable workflow (`issues:` trigger + AI agent + API key in
 
 ## Rules
 
-36 rules across 9 categories. All built-in, stdlib-only, zero runtime dependencies.
+**102 rules across 26 categories.** All built-in, stdlib-only, zero runtime dependencies.
 
-### Secrets & Injection (10 rules)
+This catalogue is generated from the rule registry — it cannot drift from the shipped engine.
 
-| Rule | Severity | What it catches |
-|------|----------|----------------|
-| VGL-S001 | CRITICAL | Hardcoded AWS / cloud API keys |
-| VGL-S002 | CRITICAL | Hardcoded passwords (`password =`, `passwd =`) |
-| VGL-S003 | HIGH | Generic API key / token assignments |
-| VGL-S004 | HIGH | Generic secret / credential assignments |
-| VGL-S005 | CRITICAL | JWT signing secrets |
-| VGL-S006 | CRITICAL | PEM private keys |
-| VGL-S007 | CRITICAL | Credential-embedded database URLs (`postgres://user:pass@host`) |
-| VGL-S008 | CRITICAL | Stripe live keys (`sk_live_...`) |
-| VGL-S009 | CRITICAL | Slack tokens (`xoxb-`, `xoxp-`) |
-| VGL-S010 | CRITICAL | OpenAI, GitHub, GitLab, Google provider keys |
-| VGL-I001 | CRITICAL | `eval()` with variable input |
-| VGL-I002 | HIGH | `subprocess(shell=True)` with variable input |
-| VGL-I003 | HIGH | `os.system()` with variable input |
 
-### Docker IaC (2 rules)
+### Secrets & Credential Exposure (14 rules)
 
 | Rule | Severity | What it catches |
 |------|----------|----------------|
-| VGL-D001 | CRITICAL | `"PORT:PORT"` binding — bypasses UFW, exposes to internet |
-| VGL-D002 | HIGH | Hardcoded secrets in `environment:` blocks |
+| VGL-I001 | CRITICAL | eval() or exec() — code injection risk |
+| VGL-I002 | HIGH | subprocess with shell=True |
+| VGL-I003 | HIGH | os.system() call |
+| VGL-S001 | CRITICAL | AWS access key hardcoded |
+| VGL-S002 | CRITICAL | Hardcoded password |
+| VGL-S003 | CRITICAL | Hardcoded API key |
+| VGL-S004 | CRITICAL | Hardcoded bearer token |
+| VGL-S005 | CRITICAL | Hardcoded JWT secret |
+| VGL-S006 | CRITICAL | PEM private key in source |
+| VGL-S007 | CRITICAL | Database URL with embedded credentials |
+| VGL-S008 | CRITICAL | Stripe live secret key |
+| VGL-S009 | CRITICAL | Slack token hardcoded |
+| VGL-S010 | CRITICAL | Provider API key hardcoded (OpenAI / GitHub / GitLab / Google) |
+| VGL-S011 | HIGH | Insecure placeholder default for security-critical config |
 
-### Dockerfile Hardening (3 rules)
 
-| Rule | Severity | What it catches |
-|------|----------|----------------|
-| VGL-DF001 | HIGH | Container running as root (no `USER` directive) |
-| VGL-DF002 | MEDIUM | Unpinned `:latest` base image |
-| VGL-DF003 | CRITICAL | Secrets baked into image layers via `ENV`/`ARG` |
-
-### nginx (1 rule)
-
-| Rule | Severity | What it catches |
-|------|----------|----------------|
-| VGL-N001 | HIGH | Missing security headers, `server_tokens on`, deprecated TLS |
-
-### Kubernetes (1 rule)
-
-| Rule | Severity | What it catches |
-|------|----------|----------------|
-| VGL-K001 | CRITICAL/HIGH | `privileged: true`, `hostNetwork/hostPID/hostIPC: true` |
-
-### IAM Policies (1 rule)
+### GitHub Actions — AI Agent Surface (9 rules)
 
 | Rule | Severity | What it catches |
 |------|----------|----------------|
-| VGL-IAM001 | CRITICAL/HIGH | `"Action": "*"` and `"Resource": "*"` wildcards |
+| VGL-GHA001 | CRITICAL | Pwn Request — pull_request_target with attacker-controlled checkout ref |
+| VGL-GHA002 | CRITICAL | Script injection — user-controlled context expression in run: step |
+| VGL-GHA004 | HIGH | Secret directly interpolated in run: step (visible in process table) |
+| VGL-GHA005 | MEDIUM | Workflow missing explicit permissions block (implicit GITHUB_TOKEN scope) |
+| VGL-GHA006 | HIGH | Cache usage in pull_request workflow (cache poisoning attack vector) |
+| VGL-GHA007 | HIGH | Self-hosted runner with pull_request trigger (persistent runner risk) |
+| VGL-GHA008 | HIGH | workflow_run trigger without ref/repo validation |
+| VGL-GHA009 | CRITICAL | AI agent wired to untrusted-input trigger (issues/pull_request_target) with API key in env |
+| VGL-GHA010 | HIGH | AI agent on pull_request_target without fork origin guard |
 
-### AI Agent Patterns (7 rules)
 
-New category — catches the security anti-patterns unique to AI-generated agentic code.
+### Dockerfile Hardening (8 rules)
 
 | Rule | Severity | What it catches |
 |------|----------|----------------|
-| VGL-A001 | CRITICAL | LLM output piped to `subprocess.run()` / `os.system()` |
-| VGL-A002 | HIGH | Hardcoded `auto_approve = True` / `skip_confirmation = True` |
-| VGL-A003 | HIGH | Unbounded `while True` loop making LLM calls with no iteration cap |
-| VGL-A004 | HIGH | LLM response content written directly to filesystem |
-| VGL-PI001 | CRITICAL | User input embedded in system prompt |
-| VGL-PI002 | HIGH | Raw `request.body` passed as LLM message content |
-| VGL-PI003 | HIGH | `str.format()` on `system_prompt` variables with user-controlled data |
-| VGL-PI004 | MEDIUM | Unsanitized tool output appended to conversation |
+| VGL-DF001 | HIGH | Dockerfile runs as root — no USER directive |
+| VGL-DF002 | MEDIUM | Dockerfile uses unpinned :latest base image |
+| VGL-DF003 | HIGH | Dockerfile bakes secret into ENV or ARG layer |
+| VGL-DF004 | HIGH | curl|bash or wget|sh pipe in Dockerfile RUN instruction |
+| VGL-DF005 | HIGH | TLS verification disabled in Dockerfile RUN fetch |
+| VGL-DF006 | MEDIUM | ADD used for local files — use COPY instead |
+| VGL-DF007 | HIGH | COPY . without .dockerignore — risks leaking .git, .env, credentials |
+| VGL-DF008 | MEDIUM | World-writable permissions set in Dockerfile (chmod 777) |
+
+
+### Docker Compose (7 rules)
+
+| Rule | Severity | What it catches |
+|------|----------|----------------|
+| VGL-D001 | CRITICAL | Docker public port binding — bypasses UFW, exposes service to internet |
+| VGL-D002 | HIGH | docker-compose environment block contains hardcoded secret |
+| VGL-D003 | CRITICAL | Docker container runs in privileged mode |
+| VGL-D004 | HIGH | Docker container uses host network mode |
+| VGL-D005 | CRITICAL | Docker socket mounted into container — full container escape vector |
+| VGL-D006 | HIGH | Sensitive host path mounted into container |
+| VGL-D007 | HIGH | AWS credentials directory (~/.aws) mounted into container — exposes all profiles |
+
+
+### Terraform (7 rules)
+
+| Rule | Severity | What it catches |
+|------|----------|----------------|
+| VGL-TF001 | CRITICAL | Terraform hardcoded secret value |
+| VGL-TF002 | HIGH | Terraform resource with public access enabled |
+| VGL-TF003 | HIGH | Terraform encryption explicitly disabled |
+| VGL-TF004 | CRITICAL | IMDSv1 enabled on EC2 instance — vulnerable to SSRF metadata theft |
+| VGL-TF005 | HIGH | Terraform S3 state backend stored without encryption |
+| VGL-TF006 | MEDIUM | Deletion protection disabled on managed resource |
+| VGL-TF007 | MEDIUM | Audit logging disabled on Terraform-managed resource |
+
+
+### Deserialization & Path Traversal (5 rules)
+
+| Rule | Severity | What it catches |
+|------|----------|----------------|
+| VGL-DESER001 | CRITICAL | Insecure deserialization — pickle.loads / pickle.load |
+| VGL-DESER002 | HIGH | Insecure YAML deserialization — yaml.load() without SafeLoader |
+| VGL-DESER003 | HIGH | Insecure deserialization — marshal.loads with untrusted data |
+| VGL-PATH001 | HIGH | Path traversal — user input passed to file open or path join without validation |
+| VGL-SSTI001 | CRITICAL | Server-Side Template Injection — user input rendered as Jinja2 template |
+
+
+### Web Application Security (5 rules)
+
+| Rule | Severity | What it catches |
+|------|----------|----------------|
+| VGL-CORS001 | HIGH | CORS wildcard — allow_origins=['*'] |
+| VGL-SQL001 | CRITICAL | SQL injection — query built with f-string or string concatenation |
+| VGL-SQL002 | CRITICAL | SQL injection — ORM raw query with f-string |
+| VGL-SSL001 | HIGH | SSL verification disabled |
+| VGL-SSRF001 | CRITICAL | SSRF — HTTP call with user-controlled URL |
+
+
+### AI Agent — Excessive Agency (4 rules)
+
+| Rule | Severity | What it catches |
+|------|----------|----------------|
+| VGL-A001 | CRITICAL |  |
+| VGL-A002 | HIGH |  |
+| VGL-A003 | HIGH |  |
+| VGL-A004 | HIGH |  |
+
+
+### AI Agent — Prompt Injection (4 rules)
+
+| Rule | Severity | What it catches |
+|------|----------|----------------|
+| VGL-PI001 | CRITICAL |  |
+| VGL-PI002 | HIGH |  |
+| VGL-PI003 | HIGH |  |
+| VGL-PI004 | MEDIUM |  |
+
+
+### Authentication & Session (4 rules)
+
+| Rule | Severity | What it catches |
+|------|----------|----------------|
+| VGL-AUTH001 | CRITICAL | JWT algorithm=none — signature verification bypassed |
+| VGL-AUTH002 | CRITICAL | JWT verify_signature disabled — any token accepted |
+| VGL-AUTH003 | HIGH | Weak or hardcoded web framework secret key |
+| VGL-AUTH004 | HIGH | Debug mode enabled in framework code |
+
+
+### Dependency Integrity (4 rules)
+
+| Rule | Severity | What it catches |
+|------|----------|----------------|
+| VGL-PKG001 | CRITICAL | Package audit (CVE · hallucination · staleness · supply chain) |
+| VGL-PKG002 | CRITICAL | Package not found on registry — hallucinated or slopsquatting target |
+| VGL-PKG003 | HIGH | Package version significantly behind latest — stale AI training data |
+| VGL-PKG004 | HIGH | Package newly registered with few releases — supply-chain risk |
+
+
+### Kubernetes (4 rules)
+
+| Rule | Severity | What it catches |
+|------|----------|----------------|
+| VGL-K001 | CRITICAL |  |
+| VGL-K002 | CRITICAL | allowPrivilegeEscalation enabled in Kubernetes securityContext |
+| VGL-K003 | HIGH | Dangerous Linux capabilities added in Kubernetes securityContext |
+| VGL-K004 | HIGH | Sensitive hostPath volume in Kubernetes manifest |
+
+
+### Logging & Data Exposure (4 rules)
+
+| Rule | Severity | What it catches |
+|------|----------|----------------|
+| VGL-LOG001 | HIGH | Sensitive data written to logs (CWE-532) |
+| VGL-LOG002 | HIGH | Error details leaked in HTTP response body (CWE-209) |
+| VGL-LOG003 | MEDIUM | Silent exception swallowing in authentication/security context |
+| VGL-LOG004 | MEDIUM | CRLF injection risk — user-controlled input logged without newline sanitization |
+
+
+### Swift / iOS (4 rules)
+
+| Rule | Severity | What it catches |
+|------|----------|----------------|
+| VGL-SW001 | CRITICAL | Hardcoded secret in Swift string literal |
+| VGL-SW002 | HIGH | Plain HTTP URL in Swift networking code |
+| VGL-SW003 | HIGH | Sensitive value written to UserDefaults (unencrypted) |
+| VGL-SW004 | CRITICAL | SSL certificate validation bypassed in URLSession delegate |
+
+
+### Dependency CVE Scanners (3 rules)
+
+| Rule | Severity | What it catches |
+|------|----------|----------------|
+| VGL-DEP001 | HIGH | Vulnerable Python packages (pip-audit) |
+| VGL-DEP002 | HIGH | Critical npm vulnerability (npm audit) |
+| VGL-DEP003 | HIGH | Vulnerable lockfile package (osv-scanner) |
+
+
+### GitHub Actions — Workflow Hygiene (3 rules)
+
+| Rule | Severity | What it catches |
+|------|----------|----------------|
+| VGL-GH001 | HIGH | GitHub Actions secret printed in run step (log exposure) |
+| VGL-GH002 | HIGH | GitHub Actions workflow with excessive permissions |
+| VGL-GH003 | HIGH | GitHub Actions uses mutable action ref (tag or branch) |
+
 
 ### MCP Server Security (3 rules)
 
 | Rule | Severity | What it catches |
 |------|----------|----------------|
-| VGL-MCP001 | CRITICAL | Injection strings in tool descriptions (`ignore previous instructions`) |
-| VGL-MCP002 | HIGH | Dynamic tool descriptions built from user-controlled data |
-| VGL-MCP003 | HIGH | Shell execution inside MCP handlers without a sandbox |
+| VGL-MCP001 | CRITICAL |  |
+| VGL-MCP002 | HIGH |  |
+| VGL-MCP003 | HIGH |  |
+
+
+### JavaScript / TypeScript (2 rules)
+
+| Rule | Severity | What it catches |
+|------|----------|----------------|
+| VGL-JS001 | HIGH | process.env secret with hardcoded string fallback |
+| VGL-JS004 | HIGH | eval() or new Function() with dynamic argument (CWE-95) |
+
+
+### Row-Level Security (2 rules)
+
+| Rule | Severity | What it catches |
+|------|----------|----------------|
+| VGL-RLS001 | CRITICAL | PostgreSQL Row-Level Security explicitly disabled |
+| VGL-RLS002 | HIGH | Multi-tenant ORM query missing user/tenant filter |
+
+
+### Cross-Site Scripting (1 rule)
+
+| Rule | Severity | What it catches |
+|------|----------|----------------|
+| VGL-XSS001 | HIGH | Cross-Site Scripting — unsafe HTML injection (CWE-79) |
+
+
+### Cryptography (1 rule)
+
+| Rule | Severity | What it catches |
+|------|----------|----------------|
+| VGL-RAND001 | HIGH | Weak randomness for security-sensitive value (CWE-330) |
+
+
+### IAM Policies (1 rule)
+
+| Rule | Severity | What it catches |
+|------|----------|----------------|
+| VGL-IAM001 | CRITICAL |  |
+
+
+### Python (1 rule)
+
+| Rule | Severity | What it catches |
+|------|----------|----------------|
+| VGL-PY001 | HIGH | Debug bypass without env guard — auth/security conditionally disabled |
+
 
 ### Shell Scripts (1 rule)
 
 | Rule | Severity | What it catches |
 |------|----------|----------------|
-| VGL-S011 | HIGH | Secret variable passed inline to subprocess or SSH command — visible in `ps aux` on both machines |
+| VGL-S011 | HIGH | Secret variable passed inline to subprocess/SSH (ps aux leak) |
 
-### Dependency CVEs (2 rules)
-
-| Rule | Severity | What it catches |
-|------|----------|----------------|
-| VGL-DEP001 | HIGH | Python CVEs via `pip-audit` (runs on every `requirements.txt` change) |
-| VGL-DEP002 | HIGH | npm CVEs via `npm audit` (runs on every `package.json` change) |
 
 ### Trivy IaC Deep Scan (1 rule)
 
 | Rule | Severity | What it catches |
 |------|----------|----------------|
-| VGL-T001 | HIGH | Dockerfile and Terraform misconfigurations via Trivy |
+| VGL-T001 | HIGH | Trivy IaC deep scan — Dockerfile / Terraform misconfigurations |
+
+
+### nginx (1 rule)
+
+| Rule | Severity | What it catches |
+|------|----------|----------------|
+| VGL-N001 | HIGH | nginx config missing security headers or weak TLS |
 
 ---
 
