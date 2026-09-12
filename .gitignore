@@ -30,3 +30,8 @@ secrets.toml
 .pytest_cache/
 htmlcov/
 .coverage
+
+# Node / VS Code extension build
+node_modules/
+vigil-vscode/out/
+*.vsix
