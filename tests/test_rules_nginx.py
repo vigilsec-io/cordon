@@ -1,7 +1,7 @@
 from pathlib import Path
 import pytest
-from vigil.rules.nginx import NginxSecurityHeadersRule
-from vigil.rules.base import Severity
+from valca.rules.nginx import NginxSecurityHeadersRule
+from valca.rules.base import Severity
 
 rule = NginxSecurityHeadersRule()
 

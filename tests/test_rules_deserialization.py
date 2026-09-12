@@ -1,10 +1,10 @@
 """Tests for deserialization, path traversal, and SSTI rules: VGL-DESER001–003, VGL-PATH001, VGL-SSTI001."""
 import pytest
-from vigil.rules.deserialization import (
+from valca.rules.deserialization import (
     PickleDeserializeRule, YamlLoadRule, MarshalDeserializeRule,
     PathTraversalRule, SstiRule,
 )
-from vigil.rules.base import Severity
+from valca.rules.base import Severity
 
 
 @pytest.fixture

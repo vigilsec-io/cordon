@@ -3,7 +3,7 @@ import json
 import os
 from pathlib import Path
 import pytest
-from vigil.rules.base import Finding, Severity
+from valca.rules.base import Finding, Severity
 
 
 @pytest.fixture
@@ -25,18 +25,18 @@ def _finding(rule_id="VGL-S001", sev=Severity.HIGH, msg="test finding"):
 class TestFindingsLogAppend:
 
     def test_creates_log_file_on_first_write(self, log_path):
-        from vigil import findingslog
+        from valca import findingslog
         findingslog.append([_finding()])
         assert log_path.exists()
 
     def test_appends_jsonl_record_per_finding(self, log_path):
-        from vigil import findingslog
+        from valca import findingslog
         findingslog.append([_finding("VGL-S001"), _finding("VGL-D001")])
         lines = [l for l in log_path.read_text().splitlines() if l.strip()]
         assert len(lines) == 2
 
     def test_record_has_required_fields(self, log_path):
-        from vigil import findingslog
+        from valca import findingslog
         findingslog.append([_finding("VGL-S001", Severity.CRITICAL, "bad secret")])
         record = json.loads(log_path.read_text().splitlines()[0])
         assert "ts" in record
@@ -46,25 +46,25 @@ class TestFindingsLogAppend:
         assert "bad secret" in record["title"]
 
     def test_append_is_additive(self, log_path):
-        from vigil import findingslog
+        from valca import findingslog
         findingslog.append([_finding("VGL-S001")])
         findingslog.append([_finding("VGL-S002")])
         lines = [l for l in log_path.read_text().splitlines() if l.strip()]
         assert len(lines) == 2
 
     def test_no_op_on_empty_findings(self, log_path):
-        from vigil import findingslog
+        from valca import findingslog
         findingslog.append([])
         assert not log_path.exists()
 
     def test_session_id_included_when_provided(self, log_path):
-        from vigil import findingslog
+        from valca import findingslog
         findingslog.append([_finding()], session_id="abc-123")
         record = json.loads(log_path.read_text().splitlines()[0])
         assert record["session_id"] == "abc-123"
 
     def test_session_id_omitted_when_not_provided(self, log_path):
-        from vigil import findingslog
+        from valca import findingslog
         findingslog.append([_finding()])
         record = json.loads(log_path.read_text().splitlines()[0])
         assert "session_id" not in record
@@ -79,11 +79,11 @@ class TestFindingsLogRead:
                 fh.write(json.dumps(e) + "\n")
 
     def test_returns_empty_when_no_log(self, log_path):
-        from vigil import findingslog
+        from valca import findingslog
         assert findingslog.read() == []
 
     def test_returns_all_entries_within_limit(self, log_path):
-        from vigil import findingslog
+        from valca import findingslog
         self._write(log_path, [
             {"ts": "2026-06-28T10:00:00+00:00", "rule": "VGL-S001", "severity": "HIGH", "file": "a.py", "title": "x", "detail": ""},
             {"ts": "2026-06-28T11:00:00+00:00", "rule": "VGL-D001", "severity": "MEDIUM", "file": "b.py", "title": "y", "detail": ""},
@@ -92,14 +92,14 @@ class TestFindingsLogRead:
         assert len(result) == 2
 
     def test_limit_respected(self, log_path):
-        from vigil import findingslog
+        from valca import findingslog
         entries = [{"ts": "2026-06-28T10:00:00+00:00", "rule": f"VGL-{i}", "severity": "HIGH", "file": "f.py", "title": "", "detail": ""} for i in range(10)]
         self._write(log_path, entries)
         result = findingslog.read(limit=3)
         assert len(result) == 3
 
     def test_project_filter(self, log_path):
-        from vigil import findingslog
+        from valca import findingslog
         self._write(log_path, [
             {"ts": "2026-06-28T10:00:00+00:00", "rule": "VGL-S001", "severity": "HIGH", "file": "/myapp/api.py", "title": "", "detail": ""},
             {"ts": "2026-06-28T10:00:00+00:00", "rule": "VGL-S002", "severity": "HIGH", "file": "/other/main.py", "title": "", "detail": ""},
@@ -109,7 +109,7 @@ class TestFindingsLogRead:
         assert "myapp" in result[0]["file"]
 
     def test_severity_filter(self, log_path):
-        from vigil import findingslog
+        from valca import findingslog
         self._write(log_path, [
             {"ts": "2026-06-28T10:00:00+00:00", "rule": "VGL-S001", "severity": "HIGH", "file": "f.py", "title": "", "detail": ""},
             {"ts": "2026-06-28T10:00:00+00:00", "rule": "VGL-S002", "severity": "MEDIUM", "file": "f.py", "title": "", "detail": ""},
@@ -118,7 +118,7 @@ class TestFindingsLogRead:
         assert all(e["severity"] == "HIGH" for e in result)
 
     def test_since_filter(self, log_path):
-        from vigil import findingslog
+        from valca import findingslog
         self._write(log_path, [
             {"ts": "2026-06-27T10:00:00+00:00", "rule": "VGL-S001", "severity": "HIGH", "file": "f.py", "title": "", "detail": ""},
             {"ts": "2026-06-29T10:00:00+00:00", "rule": "VGL-S002", "severity": "HIGH", "file": "f.py", "title": "", "detail": ""},
@@ -128,7 +128,7 @@ class TestFindingsLogRead:
         assert result[0]["rule"] == "VGL-S002"
 
     def test_skips_malformed_lines(self, log_path):
-        from vigil import findingslog
+        from valca import findingslog
         log_path.parent.mkdir(parents=True, exist_ok=True)
         log_path.write_text('not json\n{"ts":"2026-06-28T10:00:00+00:00","rule":"VGL-S001","severity":"HIGH","file":"f.py","title":"","detail":""}\n')
         result = findingslog.read()
@@ -139,8 +139,8 @@ class TestEngineWritesToLog:
     """Integration: engine.scan() should append findings to the log."""
 
     def test_engine_scan_appends_findings(self, tmp_path, log_path):
-        from vigil.engine import Engine
-        from vigil.rules.base import Rule, Finding, Severity
+        from valca.engine import Engine
+        from valca.rules.base import Rule, Finding, Severity
 
         class AlwaysFindsRule(Rule):
             id = "VGL-TEST-001"
@@ -156,14 +156,14 @@ class TestEngineWritesToLog:
         engine = Engine(rules=[AlwaysFindsRule()], telemetry_enabled=False)
         engine.scan(f)
 
-        from vigil import findingslog
+        from valca import findingslog
         entries = findingslog.read()
         assert len(entries) == 1
         assert entries[0]["rule"] == "VGL-TEST-001"
 
     def test_engine_scan_no_log_on_clean_file(self, tmp_path, log_path):
-        from vigil.engine import Engine
-        from vigil.rules.base import Rule, Severity
+        from valca.engine import Engine
+        from valca.rules.base import Rule, Severity
 
         class NeverFindsRule(Rule):
             id = "VGL-TEST-002"

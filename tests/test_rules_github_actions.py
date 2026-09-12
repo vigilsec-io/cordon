@@ -1,6 +1,6 @@
 """Tests for GitHub Actions security rules: VGL-GH001, VGL-GH002, VGL-GH003."""
 import pytest
-from vigil.rules.github_actions import (
+from valca.rules.github_actions import (
     GhActionsSecretInRunRule,
     GhActionsExcessivePermissionsRule,
     GhActionsUnpinnedActionRule,
@@ -162,11 +162,11 @@ class TestGhActionsUnpinnedActionRule:
         assert self.rule.check(f)[0].rule_id == "VGL-GH003"
 
     def test_floating_branch_is_critical(self, wf_file):
-        from vigil.rules.base import Severity
+        from valca.rules.base import Severity
         f = wf_file(_GH_HEADER + '      - uses: owner/action@main\n')
         assert self.rule.check(f)[0].severity == Severity.CRITICAL
 
     def test_version_tag_is_high(self, wf_file):
-        from vigil.rules.base import Severity
+        from valca.rules.base import Severity
         f = wf_file(_GH_HEADER + '      - uses: actions/checkout@v4\n')
         assert self.rule.check(f)[0].severity == Severity.HIGH

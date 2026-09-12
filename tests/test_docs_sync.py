@@ -14,7 +14,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from vigil.rules import DEFAULT_RULES
+from valca.rules import DEFAULT_RULES
 
 REPO = Path(__file__).resolve().parent.parent
 README = REPO / "README.md"
@@ -39,7 +39,7 @@ def documented_rule_ids() -> set[str]:
 
 def test_sub_rule_ids_are_real() -> None:
     """SUB_RULE_IDS must appear in the source, or this file is lying to the others."""
-    source = "\n".join(p.read_text() for p in (REPO / "src" / "vigil" / "rules").glob("*.py"))
+    source = "\n".join(p.read_text() for p in (REPO / "src" / "valca" / "rules").glob("*.py"))
     for rule_id in SUB_RULE_IDS:
         assert rule_id in source, f"{rule_id} is declared a sub-rule but appears nowhere in the source"
 
@@ -69,7 +69,7 @@ def test_no_documented_rule_is_missing_from_engine() -> None:
 
 
 def test_every_cli_command_is_documented() -> None:
-    from vigil import cli
+    from valca import cli
 
     commands = set(getattr(cli, "COMMANDS", ())) or _commands_from_parser()
     undocumented = sorted(
@@ -94,7 +94,7 @@ def _commands_from_parser() -> set[str]:
     import contextlib
     import io
 
-    from vigil import cli
+    from valca import cli
 
     buf = io.StringIO()
     with contextlib.redirect_stdout(buf), contextlib.suppress(SystemExit):

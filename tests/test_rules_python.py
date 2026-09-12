@@ -1,7 +1,7 @@
 """Tests for VGL-PY001 — debug bypass without env guard."""
 import pytest
-from vigil.rules.python import DebugBypassRule
-from vigil.rules.base import Severity
+from valca.rules.python import DebugBypassRule
+from valca.rules.base import Severity
 
 
 @pytest.fixture

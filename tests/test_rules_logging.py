@@ -1,6 +1,6 @@
 """Tests for logging secrets rules: VGL-LOG001–LOG004."""
 import pytest
-from vigil.rules.logging_secrets import (
+from valca.rules.logging_secrets import (
     LoggingSecretsRule, ErrorLeakRule, SilentAuthExceptionRule, CrlfLogInjectionRule,
 )
 
@@ -145,7 +145,7 @@ class TestErrorLeakRule:
 
     def test_finding_is_high(self, web_py_file):
         f = web_py_file("    return str(e)\n")
-        from vigil.rules.base import Severity
+        from valca.rules.base import Severity
         assert self.rule.check(f)[0].severity == Severity.HIGH
 
     def test_finding_has_correct_rule_id(self, web_py_file):

@@ -23,7 +23,7 @@ def _find_hook_sh() -> Path | None:
     """Locate plugin/hook.sh relative to this file (works for editable installs)."""
     here = Path(__file__).resolve().parent
     candidates = [
-        here.parent.parent / "plugin" / "hook.sh",    # editable: src/vigil/ → project root
+        here.parent.parent / "plugin" / "hook.sh",    # editable: src/valca/ → project root
         Path.home() / ".vigil" / "plugin" / "hook.sh",
         Path("/usr/local/share/vigil/hook.sh"),
     ]

@@ -1,6 +1,6 @@
 """Tests for XSS rule: VGL-XSS001."""
 import pytest
-from vigil.rules.xss import XssRule
+from valca.rules.xss import XssRule
 
 
 @pytest.fixture

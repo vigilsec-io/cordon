@@ -1,7 +1,7 @@
 from pathlib import Path
 import pytest
-from vigil.engine import Engine
-from vigil.rules import (
+from valca.engine import Engine
+from valca.rules import (
     DockerPortExposureRule, DockerfileRootUserRule,
     DockerfileLatestTagRule, AwsAccessKeyRule, Severity, SEVERITY_ORDER,
 )
@@ -93,7 +93,7 @@ def test_rule_not_applied_to_wrong_file_type(tmp_path):
 
 def test_pragma_allowlist_suppresses_finding(tmp_path):
     """'# pragma: allowlist secret' on the same line suppresses a finding."""
-    from vigil.rules.base import Rule, Finding, Severity
+    from valca.rules.base import Rule, Finding, Severity
 
     class AlwaysRule(Rule):
         id = "VGL-TEST-SUP"
@@ -113,7 +113,7 @@ def test_pragma_allowlist_suppresses_finding(tmp_path):
 
 def test_vigil_ignore_still_suppresses(tmp_path):
     """'# vigil: ignore' continues to suppress findings after pragma addition."""
-    from vigil.rules.base import Rule, Finding, Severity
+    from valca.rules.base import Rule, Finding, Severity
 
     class AlwaysRule(Rule):
         id = "VGL-TEST-IGN"

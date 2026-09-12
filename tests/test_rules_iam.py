@@ -1,6 +1,6 @@
 import pytest
-from vigil.rules.iam import IamWildcardRule
-from vigil.rules.base import Severity
+from valca.rules.iam import IamWildcardRule
+from valca.rules.base import Severity
 
 rule = IamWildcardRule()
 

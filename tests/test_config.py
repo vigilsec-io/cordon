@@ -1,11 +1,11 @@
 from pathlib import Path
 import pytest
-from vigil.config import VigilConfig, load_config
-from vigil.rules import DEFAULT_RULES
+from valca.config import ValcaConfig, load_config
+from valca.rules import DEFAULT_RULES
 
 
 def test_default_config_is_empty():
-    c = VigilConfig()
+    c = ValcaConfig()
     assert c.disabled_rules == []
     assert c.min_severity is None
     assert c.exclude_paths == []

@@ -1,8 +1,8 @@
 from pathlib import Path
 import json
 import pytest
-from vigil.reporter import report_sarif, report_json
-from vigil.rules.base import Finding, Severity
+from valca.reporter import report_sarif, report_json
+from valca.rules.base import Finding, Severity
 
 
 def _make_finding(rule_id: str = "VGL-D001", sev: Severity = Severity.CRITICAL,

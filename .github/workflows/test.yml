@@ -30,7 +30,7 @@ jobs:
         run: pytest tests/ -q
 
       - name: Security (bandit)
-        run: bandit -r src/vigil/ --skip B404,B603,B607,B110,B101 -ll -q
+        run: bandit -r src/valca/ --skip B404,B603,B607,B110,B101 -ll -q
 
       - name: Trivy (IaC + deps)
         uses: aquasecurity/trivy-action@df678dbccf677bc6937338d569ba0da18964a8cc  # master

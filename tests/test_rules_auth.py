@@ -1,6 +1,6 @@
 """Tests for auth security rules: VGL-AUTH001–004."""
 import pytest
-from vigil.rules.auth import (
+from valca.rules.auth import (
     JwtAlgorithmNoneRule,
     JwtVerifyDisabledRule,
     WeakSecretKeyRule,
@@ -51,7 +51,7 @@ class TestJwtAlgorithmNoneRule:
         assert not self.rule.check(f)
 
     def test_finding_is_critical(self, py_file):
-        from vigil.rules.base import Severity
+        from valca.rules.base import Severity
         f = py_file('jwt.decode(token, key, algorithms=["none"])\n')
         assert self.rule.check(f)[0].severity == Severity.CRITICAL
 

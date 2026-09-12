@@ -1,11 +1,11 @@
 from pathlib import Path
 import pytest
-from vigil.rules.dockerfile import (
+from valca.rules.dockerfile import (
     DockerfileEnvSecretRule, DockerfileCurlBashRule,
     DockerfileInsecureFetchRule, DockerfileAddLocalRule,
     DockerfileWildcardCopyRule, DockerfileChmod777Rule,
 )
-from vigil.rules.base import Severity
+from valca.rules.base import Severity
 
 rule = DockerfileEnvSecretRule()
 

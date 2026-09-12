@@ -1,6 +1,6 @@
 """Tests for Terraform security rules: VGL-TF001–VGL-TF007."""
 import pytest
-from vigil.rules.terraform import (
+from valca.rules.terraform import (
     TerraformHardcodedSecretRule,
     TerraformPublicAccessRule,
     TerraformEncryptionDisabledRule,
@@ -116,7 +116,7 @@ class TestTerraformPublicAccessRule:
         assert not self.rule.check(f)
 
     def test_finding_is_high(self, tf_file):
-        from vigil.rules.base import Severity
+        from valca.rules.base import Severity
         f = tf_file('  publicly_accessible = true\n')
         assert self.rule.check(f)[0].severity == Severity.HIGH
 

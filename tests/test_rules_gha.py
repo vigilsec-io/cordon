@@ -1,12 +1,12 @@
 """Tests for GitHub Actions advanced security rules: VGL-GHA001-002, GHA004-010."""
 import pytest
-from vigil.rules.gha import (
+from valca.rules.gha import (
     GhaPwnRequestRule, GhaScriptInjectionRule, GhaSecretsInRunRule,
     GhaMissingPermissionsRule, GhaCachePoisoningRule,
     GhaSelfHostedOnPrRule, GhaWorkflowRunNoRefRule,
     GhaAiAgentUntrustedTriggerRule, GhaAiAgentForkGuardRule,
 )
-from vigil.rules.base import Severity
+from valca.rules.base import Severity
 
 
 @pytest.fixture

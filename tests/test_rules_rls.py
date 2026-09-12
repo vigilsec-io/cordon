@@ -1,6 +1,6 @@
 """Tests for row-level security rules: VGL-RLS001, VGL-RLS002."""
 import pytest
-from vigil.rules.rls import RlsDisabledRule, MissingTenantFilterRule
+from valca.rules.rls import RlsDisabledRule, MissingTenantFilterRule
 
 
 @pytest.fixture
@@ -58,7 +58,7 @@ class TestRlsDisabledRule:
         assert not self.rule.check(f)
 
     def test_finding_is_critical(self, sql_file):
-        from vigil.rules.base import Severity
+        from valca.rules.base import Severity
         f = sql_file("ALTER TABLE t DISABLE ROW LEVEL SECURITY;\n")
         assert self.rule.check(f)[0].severity == Severity.CRITICAL
 

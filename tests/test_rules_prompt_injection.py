@@ -1,11 +1,11 @@
 import pytest
-from vigil.rules.prompt_injection import (
+from valca.rules.prompt_injection import (
     UserInputInSystemPromptRule,
     RawRequestAsLlmContentRule,
     TemplateInjectionInPromptRule,
     UnsanitizedToolOutputRule,
 )
-from vigil.rules.base import Severity
+from valca.rules.base import Severity
 
 sys_rule = UserInputInSystemPromptRule()
 req_rule = RawRequestAsLlmContentRule()

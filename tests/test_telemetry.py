@@ -6,8 +6,8 @@ from unittest.mock import patch
 
 import pytest
 
-from vigil.rules.base import Finding, Severity
-from vigil import telemetry
+from valca.rules.base import Finding, Severity
+from valca import telemetry
 
 
 def _finding(rule_id="VGL-D001", sev=Severity.CRITICAL, file_ext=".yml"):
@@ -134,8 +134,8 @@ def test_summary_counts_by_rule(tmp_path):
 
 def test_engine_respects_telemetry_false(tmp_path):
     """Engine with telemetry_enabled=False must not write events."""
-    from vigil.engine import Engine
-    from vigil.rules.docker import DockerPortExposureRule as DockerPortBindingRule
+    from valca.engine import Engine
+    from valca.rules.docker import DockerPortExposureRule as DockerPortBindingRule
 
     events_file = tmp_path / "events.jsonl"
     compose = tmp_path / "docker-compose.yml"
@@ -292,8 +292,8 @@ def test_summary_first_last_scan_timestamps(tmp_path):
 # ── Engine suppression + FP (ticket #26) ─────────────────────────────────────
 
 def test_engine_records_fp_on_vigil_ignore(tmp_path):
-    from vigil.engine import Engine
-    from vigil.rules.base import Rule, Finding, Severity
+    from valca.engine import Engine
+    from valca.rules.base import Rule, Finding, Severity
 
     class AlwaysRule(Rule):
         id = "VGL-TEST-FP1"
@@ -320,8 +320,8 @@ def test_engine_records_fp_on_vigil_ignore(tmp_path):
 
 
 def test_engine_records_fp_on_pragma_allowlist(tmp_path):
-    from vigil.engine import Engine
-    from vigil.rules.base import Rule, Finding, Severity
+    from valca.engine import Engine
+    from valca.rules.base import Rule, Finding, Severity
 
     class AlwaysRule(Rule):
         id = "VGL-TEST-FP2"

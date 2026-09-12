@@ -1,7 +1,7 @@
 """Tests for web security rules: SSRF, SQL injection, CORS, SSL."""
 import pytest
 from pathlib import Path
-from vigil.rules.web import (
+from valca.rules.web import (
     SsrfRule, SqlInjectionFstringRule, SqlOrmRawRule,
     CorsWildcardRule, SslVerifyDisabledRule,
 )

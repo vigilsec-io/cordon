@@ -5,14 +5,14 @@ from pathlib import Path
 
 
 @dataclass
-class VigilConfig:
+class ValcaConfig:
     disabled_rules: list[str] = field(default_factory=list)
     min_severity: str | None = None
     exclude_paths: list[str] = field(default_factory=list)
     telemetry: bool = True
 
 
-def load_config(start: Path) -> VigilConfig:
+def load_config(start: Path) -> ValcaConfig:
     """Walk up from start looking for .vigilrc (TOML format).
 
     Searches the given path (or its parent if a file) and all ancestor
@@ -20,14 +20,20 @@ def load_config(start: Path) -> VigilConfig:
     """
     current = start if start.is_dir() else start.parent
     while True:
-        candidate = current / ".vigilrc"
-        if candidate.is_file():
+        # ".valcarc" is the current name; ".vigilrc" is still honoured because a
+        # config that is silently ignored re-enables rules the user had disabled
+        # and scans paths they had excluded — a failure mode with no visible signal.
+        candidate = next(
+            (c for c in (current / ".valcarc", current / ".vigilrc") if c.is_file()),
+            None,
+        )
+        if candidate is not None:
             try:
                 with open(candidate, "rb") as f:
                     data = tomllib.load(f)
             except Exception:
-                return VigilConfig()
-            return VigilConfig(
+                return ValcaConfig()
+            return ValcaConfig(
                 disabled_rules=data.get("disabled_rules", []),
                 min_severity=data.get("min_severity"),
                 exclude_paths=data.get("exclude_paths", []),
@@ -37,4 +43,4 @@ def load_config(start: Path) -> VigilConfig:
         if parent == current:
             break
         current = parent
-    return VigilConfig()
+    return ValcaConfig()

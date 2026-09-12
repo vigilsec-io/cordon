@@ -1,9 +1,9 @@
 import pytest
-from vigil.rules.agency import (
+from valca.rules.agency import (
     LlmShellExecRule, AutoApprovalBypassRule,
     UnboundedAgentLoopRule, LlmOutputFileWriteRule,
 )
-from vigil.rules.base import Severity
+from valca.rules.base import Severity
 
 shell_rule = LlmShellExecRule()
 approve_rule = AutoApprovalBypassRule()
@@ -88,7 +88,7 @@ def test_write_static_string_not_flagged(tmp_path):
 def test_vgla002_does_not_match_rule_source_file():
     """VGL-A002 must not fire on its own source file (pattern strings are not live code)."""
     from pathlib import Path
-    import vigil.rules.agency as agency_mod
+    import valca.rules.agency as agency_mod
     source = Path(agency_mod.__file__)
     assert approve_rule.check(source) == []
 
@@ -111,8 +111,8 @@ def test_vgla004_pattern_in_string_literal_not_flagged(tmp_path):
 # vigil: ignore inline suppression
 def test_engine_inline_ignore_suppresses_finding(tmp_path):
     """Lines with '# vigil: ignore' must not produce findings."""
-    from vigil.engine import Engine
-    from vigil.rules.agency import AutoApprovalBypassRule
+    from valca.engine import Engine
+    from valca.rules.agency import AutoApprovalBypassRule
     engine = Engine(rules=[AutoApprovalBypassRule()])
     f = tmp_path / "agent.py"
     f.write_text("auto_approve = True  # vigil: ignore")

@@ -42,14 +42,14 @@ Keep pull requests focused. One rule, or one fix, per PR.
 
 ## Adding a detection rule
 
-Rules live in `src/vigil/rules/` grouped by domain (`docker.py`, `gha.py`, `mcp_security.py`,
+Rules live in `src/valca/rules/` grouped by domain (`docker.py`, `gha.py`, `mcp_security.py`,
 `prompt_injection.py`, …).
 
 1. **Claim an ID.** Rules follow `VGL-<FAMILY><NNN>` — e.g. `VGL-D001` (Docker), `VGL-GHA011`
    (GitHub Actions), `VGL-MCP004` (MCP), `VGL-PI007` (prompt injection). Agree the ID on the issue
    before writing code so numbering stays stable.
 2. **Subclass `Rule`** from `.base`, returning `Finding` objects with an appropriate `Severity`.
-3. **Register it** in the `DEFAULT_RULES` list in `src/vigil/rules/__init__.py`.
+3. **Register it** in the `DEFAULT_RULES` list in `src/valca/rules/__init__.py`.
 4. **Write tests** in `tests/test_rules_<family>.py` covering *both* a true positive **and** a
    negative case that must not fire.
 5. **Document the reasoning.** A rule's docstring should say what the attack is and why existing

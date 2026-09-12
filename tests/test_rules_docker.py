@@ -1,11 +1,11 @@
 import pytest
-from vigil.rules.docker import (
+from valca.rules.docker import (
     DockerPortExposureRule, DockerComposeEnvSecretRule,
     DockerPrivilegedRule, DockerHostNetworkRule,
     DockerSocketMountRule, DockerDangerousVolumeRule,
     DockerAwsCredentialsMountRule,
 )
-from vigil.rules.base import Severity
+from valca.rules.base import Severity
 
 rule = DockerPortExposureRule()
 env_rule = DockerComposeEnvSecretRule()

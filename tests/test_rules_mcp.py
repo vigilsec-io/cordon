@@ -1,8 +1,8 @@
 import pytest
-from vigil.rules.mcp_security import (
+from valca.rules.mcp_security import (
     McpToolPoisoningRule, McpDynamicDescriptionRule, McpShellToolRule,
 )
-from vigil.rules.base import Severity
+from valca.rules.base import Severity
 
 poison_rule = McpToolPoisoningRule()
 dynamic_rule = McpDynamicDescriptionRule()

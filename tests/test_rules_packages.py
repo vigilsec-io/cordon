@@ -4,7 +4,7 @@ import time
 import pytest
 from pathlib import Path
 from unittest.mock import patch
-from vigil.rules.packages import PackageAuditRule, _is_stale, _parse_requirements, _parse_package_json, _NOT_FOUND
+from valca.rules.packages import PackageAuditRule, _is_stale, _parse_requirements, _parse_package_json, _NOT_FOUND
 
 
 # ── Parser unit tests ─────────────────────────────────────────────────────────
@@ -102,10 +102,10 @@ class TestPkgCveFindings:
         fake_osv = {"results": [{"vulns": [{"id": "PYSEC-2023-001", "summary": "Critical bug"}]}]}
         fake_pypi = {"info": {"version": "2.31.0"}, "releases": {"2.0.0": [{"upload_time": "2020-01-01T00:00:00"}], "2.31.0": [{"upload_time": "2023-01-01T00:00:00"}]}}
 
-        with patch("vigil.rules.packages._post", return_value=fake_osv), \
-             patch("vigil.rules.packages._get", return_value=fake_pypi), \
-             patch("vigil.rules.packages._load_cache", return_value={}), \
-             patch("vigil.rules.packages._save_cache"):
+        with patch("valca.rules.packages._post", return_value=fake_osv), \
+             patch("valca.rules.packages._get", return_value=fake_pypi), \
+             patch("valca.rules.packages._load_cache", return_value={}), \
+             patch("valca.rules.packages._save_cache"):
             findings = self.rule.check(f)
 
         rule_ids = [fi.rule_id for fi in findings]
@@ -115,10 +115,10 @@ class TestPkgCveFindings:
         f = tmp_path / "requirements.txt"
         f.write_text("totally-fake-hallucinated-pkg==1.0.0\n")
 
-        with patch("vigil.rules.packages._post", return_value={"results": [{"vulns": []}]}), \
-             patch("vigil.rules.packages._get", return_value=_NOT_FOUND), \
-             patch("vigil.rules.packages._load_cache", return_value={}), \
-             patch("vigil.rules.packages._save_cache"):
+        with patch("valca.rules.packages._post", return_value={"results": [{"vulns": []}]}), \
+             patch("valca.rules.packages._get", return_value=_NOT_FOUND), \
+             patch("valca.rules.packages._load_cache", return_value={}), \
+             patch("valca.rules.packages._save_cache"):
             findings = self.rule.check(f)
 
         rule_ids = [fi.rule_id for fi in findings]
@@ -134,10 +134,10 @@ class TestPkgCveFindings:
             "releases": {"1.0.0": [{"upload_time": "2020-01-01T00:00:00"}]},
         }
 
-        with patch("vigil.rules.packages._post", return_value={"results": [{"vulns": []}]}), \
-             patch("vigil.rules.packages._get", return_value=fake_pypi), \
-             patch("vigil.rules.packages._load_cache", return_value={}), \
-             patch("vigil.rules.packages._save_cache"):
+        with patch("valca.rules.packages._post", return_value={"results": [{"vulns": []}]}), \
+             patch("valca.rules.packages._get", return_value=fake_pypi), \
+             patch("valca.rules.packages._load_cache", return_value={}), \
+             patch("valca.rules.packages._save_cache"):
             findings = self.rule.check(f)
 
         rule_ids = [fi.rule_id for fi in findings]
@@ -156,10 +156,10 @@ class TestPkgCveFindings:
             },
         }
 
-        with patch("vigil.rules.packages._post", return_value={"results": [{"vulns": []}]}), \
-             patch("vigil.rules.packages._get", return_value=fake_pypi), \
-             patch("vigil.rules.packages._load_cache", return_value={}), \
-             patch("vigil.rules.packages._save_cache"):
+        with patch("valca.rules.packages._post", return_value={"results": [{"vulns": []}]}), \
+             patch("valca.rules.packages._get", return_value=fake_pypi), \
+             patch("valca.rules.packages._load_cache", return_value={}), \
+             patch("valca.rules.packages._save_cache"):
             findings = self.rule.check(f)
 
         rule_ids = [fi.rule_id for fi in findings]
@@ -169,10 +169,10 @@ class TestPkgCveFindings:
         f = tmp_path / "requirements.txt"
         f.write_text("requests==2.31.0\n")
 
-        with patch("vigil.rules.packages._post", return_value=None), \
-             patch("vigil.rules.packages._get", return_value=None), \
-             patch("vigil.rules.packages._load_cache", return_value={}), \
-             patch("vigil.rules.packages._save_cache"):
+        with patch("valca.rules.packages._post", return_value=None), \
+             patch("valca.rules.packages._get", return_value=None), \
+             patch("valca.rules.packages._load_cache", return_value={}), \
+             patch("valca.rules.packages._save_cache"):
             findings = self.rule.check(f)
 
         # Fail-open: network error → no findings (never block user)
@@ -189,10 +189,10 @@ class TestPkgCveFindings:
         f.write_text("requests==2.0.0\n")
         fake_osv = {"results": [{"vulns": [{"id": "PYSEC-2023-001", "summary": "bug"}]}]}
         fake_pypi = {"info": {"version": "2.0.0"}, "releases": {"2.0.0": [{"upload_time": "2020-01-01T00:00:00"}]}}
-        with patch("vigil.rules.packages._post", return_value=fake_osv), \
-             patch("vigil.rules.packages._get", return_value=fake_pypi), \
-             patch("vigil.rules.packages._load_cache", return_value={}), \
-             patch("vigil.rules.packages._save_cache"):
+        with patch("valca.rules.packages._post", return_value=fake_osv), \
+             patch("valca.rules.packages._get", return_value=fake_pypi), \
+             patch("valca.rules.packages._load_cache", return_value={}), \
+             patch("valca.rules.packages._save_cache"):
             findings = self.rule.check(f)
         pkg001 = [fi for fi in findings if fi.rule_id == "VGL-PKG001"]
         assert pkg001[0].severity.value == "CRITICAL"
@@ -200,10 +200,10 @@ class TestPkgCveFindings:
     def test_pkg002_severity_is_critical(self, tmp_path):
         f = tmp_path / "requirements.txt"
         f.write_text("fakepkg==1.0.0\n")
-        with patch("vigil.rules.packages._post", return_value={"results": [{"vulns": []}]}), \
-             patch("vigil.rules.packages._get", return_value=_NOT_FOUND), \
-             patch("vigil.rules.packages._load_cache", return_value={}), \
-             patch("vigil.rules.packages._save_cache"):
+        with patch("valca.rules.packages._post", return_value={"results": [{"vulns": []}]}), \
+             patch("valca.rules.packages._get", return_value=_NOT_FOUND), \
+             patch("valca.rules.packages._load_cache", return_value={}), \
+             patch("valca.rules.packages._save_cache"):
             findings = self.rule.check(f)
         pkg002 = [fi for fi in findings if fi.rule_id == "VGL-PKG002"]
         assert pkg002[0].severity.value == "CRITICAL"
@@ -212,10 +212,10 @@ class TestPkgCveFindings:
         f = tmp_path / "requirements.txt"
         f.write_text("requests==1.0.0\n")
         fake_pypi = {"info": {"version": "3.0.0"}, "releases": {"1.0.0": [{"upload_time": "2020-01-01T00:00:00"}]}}
-        with patch("vigil.rules.packages._post", return_value={"results": [{"vulns": []}]}), \
-             patch("vigil.rules.packages._get", return_value=fake_pypi), \
-             patch("vigil.rules.packages._load_cache", return_value={}), \
-             patch("vigil.rules.packages._save_cache"):
+        with patch("valca.rules.packages._post", return_value={"results": [{"vulns": []}]}), \
+             patch("valca.rules.packages._get", return_value=fake_pypi), \
+             patch("valca.rules.packages._load_cache", return_value={}), \
+             patch("valca.rules.packages._save_cache"):
             findings = self.rule.check(f)
         pkg003 = [fi for fi in findings if fi.rule_id == "VGL-PKG003"]
         assert pkg003[0].severity.value == "HIGH"
@@ -226,10 +226,10 @@ class TestPkgCveFindings:
         f.write_text("newpkg==0.1.0\n")
         recent = (datetime.now() - timedelta(days=5)).isoformat()
         fake_pypi = {"info": {"version": "0.1.0"}, "releases": {"0.1.0": [{"upload_time": recent}]}}
-        with patch("vigil.rules.packages._post", return_value={"results": [{"vulns": []}]}), \
-             patch("vigil.rules.packages._get", return_value=fake_pypi), \
-             patch("vigil.rules.packages._load_cache", return_value={}), \
-             patch("vigil.rules.packages._save_cache"):
+        with patch("valca.rules.packages._post", return_value={"results": [{"vulns": []}]}), \
+             patch("valca.rules.packages._get", return_value=fake_pypi), \
+             patch("valca.rules.packages._load_cache", return_value={}), \
+             patch("valca.rules.packages._save_cache"):
             findings = self.rule.check(f)
         pkg004 = [fi for fi in findings if fi.rule_id == "VGL-PKG004"]
         assert pkg004[0].severity.value == "HIGH"
@@ -244,10 +244,10 @@ class TestPkgCveFindings:
                 f"2.{i}.0": [{"upload_time": "2020-01-01T00:00:00"}] for i in range(20)
             },
         }
-        with patch("vigil.rules.packages._post", return_value={"results": [{"vulns": []}]}), \
-             patch("vigil.rules.packages._get", return_value=fake_pypi), \
-             patch("vigil.rules.packages._load_cache", return_value={}), \
-             patch("vigil.rules.packages._save_cache"):
+        with patch("valca.rules.packages._post", return_value={"results": [{"vulns": []}]}), \
+             patch("valca.rules.packages._get", return_value=fake_pypi), \
+             patch("valca.rules.packages._load_cache", return_value={}), \
+             patch("valca.rules.packages._save_cache"):
             findings = self.rule.check(f)
         assert not any(fi.rule_id == "VGL-PKG004" for fi in findings)
 
@@ -259,10 +259,10 @@ class TestPkgCveFindings:
             "info": {"version": "2.1.0"},
             "releases": {"2.0.0": [{"upload_time": "2020-01-01T00:00:00"}]},
         }
-        with patch("vigil.rules.packages._post", return_value={"results": [{"vulns": []}]}), \
-             patch("vigil.rules.packages._get", return_value=fake_pypi), \
-             patch("vigil.rules.packages._load_cache", return_value={}), \
-             patch("vigil.rules.packages._save_cache"):
+        with patch("valca.rules.packages._post", return_value={"results": [{"vulns": []}]}), \
+             patch("valca.rules.packages._get", return_value=fake_pypi), \
+             patch("valca.rules.packages._load_cache", return_value={}), \
+             patch("valca.rules.packages._save_cache"):
             findings = self.rule.check(f)
         assert not any(fi.rule_id == "VGL-PKG003" for fi in findings)
 
@@ -271,10 +271,10 @@ class TestPkgCveFindings:
         f = tmp_path / "requirements.txt"
         f.write_text("pkg-a==1.0.0\npkg-b==2.0.0\n")
         fake_pypi = {"info": {"version": "1.0.0"}, "releases": {"1.0.0": [{"upload_time": "2020-01-01T00:00:00"}]}}
-        with patch("vigil.rules.packages._post", return_value={"results": [{"vulns": []}, {"vulns": []}]}), \
-             patch("vigil.rules.packages._get", return_value=fake_pypi), \
-             patch("vigil.rules.packages._load_cache", return_value={}), \
-             patch("vigil.rules.packages._save_cache"):
+        with patch("valca.rules.packages._post", return_value={"results": [{"vulns": []}, {"vulns": []}]}), \
+             patch("valca.rules.packages._get", return_value=fake_pypi), \
+             patch("valca.rules.packages._load_cache", return_value={}), \
+             patch("valca.rules.packages._save_cache"):
             findings = self.rule.check(f)
         # Both packages were processed (no crash) — test passes if no exception
 
@@ -288,10 +288,10 @@ class TestPackageAuditNpm:
         f.write_text(json.dumps({"dependencies": {"express": "4.17.0"}}))
         fake_osv = {"results": [{"vulns": [{"id": "GHSA-abc-123", "summary": "XSS bug"}]}]}
         fake_npm = {"version": "4.18.2"}
-        with patch("vigil.rules.packages._post", return_value=fake_osv), \
-             patch("vigil.rules.packages._get", return_value=fake_npm), \
-             patch("vigil.rules.packages._load_cache", return_value={}), \
-             patch("vigil.rules.packages._save_cache"):
+        with patch("valca.rules.packages._post", return_value=fake_osv), \
+             patch("valca.rules.packages._get", return_value=fake_npm), \
+             patch("valca.rules.packages._load_cache", return_value={}), \
+             patch("valca.rules.packages._save_cache"):
             findings = self.rule.check(f)
         assert any(fi.rule_id == "VGL-PKG001" for fi in findings)
         assert any("GHSA-abc-123" in fi.message for fi in findings)
@@ -299,10 +299,10 @@ class TestPackageAuditNpm:
     def test_emits_pkg002_for_npm_not_found(self, tmp_path):
         f = tmp_path / "package.json"
         f.write_text(json.dumps({"dependencies": {"hallucinated-npm-pkg": "1.0.0"}}))
-        with patch("vigil.rules.packages._post", return_value={"results": [{"vulns": []}]}), \
-             patch("vigil.rules.packages._get", return_value=_NOT_FOUND), \
-             patch("vigil.rules.packages._load_cache", return_value={}), \
-             patch("vigil.rules.packages._save_cache"):
+        with patch("valca.rules.packages._post", return_value={"results": [{"vulns": []}]}), \
+             patch("valca.rules.packages._get", return_value=_NOT_FOUND), \
+             patch("valca.rules.packages._load_cache", return_value={}), \
+             patch("valca.rules.packages._save_cache"):
             findings = self.rule.check(f)
         assert any(fi.rule_id == "VGL-PKG002" for fi in findings)
 
@@ -310,20 +310,20 @@ class TestPackageAuditNpm:
         f = tmp_path / "package.json"
         f.write_text(json.dumps({"dependencies": {"express": "2.0.0"}}))
         fake_npm = {"version": "5.0.0"}
-        with patch("vigil.rules.packages._post", return_value={"results": [{"vulns": []}]}), \
-             patch("vigil.rules.packages._get", return_value=fake_npm), \
-             patch("vigil.rules.packages._load_cache", return_value={}), \
-             patch("vigil.rules.packages._save_cache"):
+        with patch("valca.rules.packages._post", return_value={"results": [{"vulns": []}]}), \
+             patch("valca.rules.packages._get", return_value=fake_npm), \
+             patch("valca.rules.packages._load_cache", return_value={}), \
+             patch("valca.rules.packages._save_cache"):
             findings = self.rule.check(f)
         assert any(fi.rule_id == "VGL-PKG003" for fi in findings)
 
     def test_npm_fail_open_on_network_error(self, tmp_path):
         f = tmp_path / "package.json"
         f.write_text(json.dumps({"dependencies": {"react": "18.0.0"}}))
-        with patch("vigil.rules.packages._post", return_value=None), \
-             patch("vigil.rules.packages._get", return_value=None), \
-             patch("vigil.rules.packages._load_cache", return_value={}), \
-             patch("vigil.rules.packages._save_cache"):
+        with patch("valca.rules.packages._post", return_value=None), \
+             patch("valca.rules.packages._get", return_value=None), \
+             patch("valca.rules.packages._load_cache", return_value={}), \
+             patch("valca.rules.packages._save_cache"):
             findings = self.rule.check(f)
         assert findings == []
 
@@ -340,9 +340,9 @@ class TestPackageAuditCache:
             "vuln:PyPI:requests:2.31.0": {"v": [], "ts": time.time()},
             "info:PyPI:requests": {"v": {"info": {"version": "2.31.0"}, "releases": {"2.31.0": [{"upload_time": "2020-01-01T00:00:00"}]}}, "ts": time.time()},
         }
-        with patch("vigil.rules.packages._post") as mock_post, \
-             patch("vigil.rules.packages._load_cache", return_value=warm_cache), \
-             patch("vigil.rules.packages._save_cache"):
+        with patch("valca.rules.packages._post") as mock_post, \
+             patch("valca.rules.packages._load_cache", return_value=warm_cache), \
+             patch("valca.rules.packages._save_cache"):
             self.rule.check(f)
         mock_post.assert_not_called()
 
@@ -354,9 +354,9 @@ class TestPackageAuditCache:
             "vuln:PyPI:requests:2.31.0": {"v": [], "ts": time.time()},
             "info:PyPI:requests": {"v": {"info": {"version": "2.31.0"}, "releases": {"2.31.0": [{"upload_time": "2020-01-01T00:00:00"}]}}, "ts": time.time()},
         }
-        with patch("vigil.rules.packages._get") as mock_get, \
-             patch("vigil.rules.packages._load_cache", return_value=warm_cache), \
-             patch("vigil.rules.packages._save_cache"):
+        with patch("valca.rules.packages._get") as mock_get, \
+             patch("valca.rules.packages._load_cache", return_value=warm_cache), \
+             patch("valca.rules.packages._save_cache"):
             self.rule.check(f)
         mock_get.assert_not_called()
 
@@ -369,10 +369,10 @@ class TestPackageAuditCache:
             "vuln:PyPI:requests:2.31.0": {"v": [], "ts": stale_ts},
         }
         fake_pypi = {"info": {"version": "2.31.0"}, "releases": {"2.31.0": [{"upload_time": "2020-01-01T00:00:00"}]}}
-        with patch("vigil.rules.packages._post", return_value={"results": [{"vulns": []}]}), \
-             patch("vigil.rules.packages._get", return_value=fake_pypi) as mock_get, \
-             patch("vigil.rules.packages._load_cache", return_value=stale_cache), \
-             patch("vigil.rules.packages._save_cache"):
+        with patch("valca.rules.packages._post", return_value={"results": [{"vulns": []}]}), \
+             patch("valca.rules.packages._get", return_value=fake_pypi) as mock_get, \
+             patch("valca.rules.packages._load_cache", return_value=stale_cache), \
+             patch("valca.rules.packages._save_cache"):
             self.rule.check(f)
         mock_get.assert_called()
 
@@ -384,9 +384,9 @@ class TestPackageAuditCache:
             "vuln:PyPI:fakepkg:1.0.0": {"v": [], "ts": time.time()},
             "info:PyPI:fakepkg": {"v": False, "ts": time.time()},  # cached not-found
         }
-        with patch("vigil.rules.packages._get") as mock_get, \
-             patch("vigil.rules.packages._load_cache", return_value=warm_cache), \
-             patch("vigil.rules.packages._save_cache"):
+        with patch("valca.rules.packages._get") as mock_get, \
+             patch("valca.rules.packages._load_cache", return_value=warm_cache), \
+             patch("valca.rules.packages._save_cache"):
             findings = self.rule.check(f)
         mock_get.assert_not_called()
         assert any(fi.rule_id == "VGL-PKG002" for fi in findings)

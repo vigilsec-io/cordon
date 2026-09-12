@@ -1,6 +1,6 @@
 """Tests for Swift / iOS security rules: VGL-SW001–SW004."""
 import pytest
-from vigil.rules.swift import (
+from valca.rules.swift import (
     SwiftHardcodedSecretRule,
     SwiftPlainHttpRule,
     SwiftUserDefaultsSecretRule,
@@ -264,7 +264,7 @@ class TestSwiftSslBypassRule:
         assert self.rule.check(f)[0].rule_id == "VGL-SW004"
 
     def test_finding_is_critical(self, sw):
-        from vigil.rules.base import Severity
+        from valca.rules.base import Severity
         f = sw(_SSL_BYPASS_DELEGATE)
         assert self.rule.check(f)[0].severity == Severity.CRITICAL
 

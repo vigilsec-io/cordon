@@ -1,6 +1,6 @@
 import pytest
-from vigil.rules.k8s import K8sSecurityRule, K8sPrivilegeEscalationRule, K8sCapabilitiesRule, K8sHostPathVolumeRule
-from vigil.rules.base import Severity
+from valca.rules.k8s import K8sSecurityRule, K8sPrivilegeEscalationRule, K8sCapabilitiesRule, K8sHostPathVolumeRule
+from valca.rules.base import Severity
 
 rule = K8sSecurityRule()
 

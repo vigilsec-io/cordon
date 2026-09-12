@@ -60,7 +60,7 @@ these rules send **package names and version strings only** to:
 | `registry.npmjs.org` | VGL-PKG002/003/004 | package name |
 
 Your source code, file contents, file paths, and scan results are never transmitted. If your
-dependency inventory is itself sensitive, turn these rules off in `.vigilrc` and Valca runs
+dependency inventory is itself sensitive, turn these rules off in `.valcarc` and Valca runs
 completely offline:
 
 ```ini
@@ -403,17 +403,17 @@ This catalogue is generated from the rule registry — it cannot drift from the 
 
 ## Configuration
 
-Place a `.vigilrc` file in your project root (or any ancestor directory):
+Place a `.valcarc` file in your project root (or any ancestor directory):
 
 ```toml
-# .vigilrc
+# .valcarc
 disabled_rules = ["VGL-T001"]        # skip trivy scan for this project
 min_severity   = "HIGH"              # only report HIGH and above
 exclude_paths  = ["vendor", "legacy"]
 telemetry      = false               # opt out of anonymous local telemetry
 ```
 
-Valca walks up the directory tree to find the nearest `.vigilrc`. Child config always wins over parent. Monorepos can have per-project overrides alongside a workspace default.
+Valca walks up the directory tree to find the nearest `.valcarc` (the former `.vigilrc` name is still read). Child config always wins over parent. Monorepos can have per-project overrides alongside a workspace default.
 
 **Inline suppression** — for a specific line you've reviewed and accepted:
 
@@ -427,15 +427,15 @@ Same pattern as `# noqa` (flake8) and `# nosec` (bandit).
 
 ## Opt-out
 
-Valca collects anonymous, local-only telemetry: rule ID, severity, and file extension. No file paths, no code, no identifiable data. Stored at `~/.vigil/events.jsonl` — never sent anywhere.
+Valca collects anonymous, local-only telemetry: rule ID, severity, and file extension. No file paths, no code, no identifiable data. Stored at `~/.valca/events.jsonl` — never sent anywhere. History from the former `~/.vigil/` location is migrated automatically.
 
 Opt out permanently:
 
 ```bash
-export VIGIL_NO_TELEMETRY=1
+export VALCA_NO_TELEMETRY=1        # VIGIL_NO_TELEMETRY still works
 ```
 
-Or in `.vigilrc`:
+Or in `.valcarc`:
 
 ```toml
 telemetry = false
@@ -446,7 +446,7 @@ telemetry = false
 ## Adding a Rule
 
 ```python
-# src/vigil/rules/my_category.py
+# src/valca/rules/my_category.py
 from pathlib import Path
 from .base import Finding, Rule, Severity
 
@@ -474,7 +474,7 @@ class MyRule(Rule):
         return findings
 ```
 
-Then add it to `DEFAULT_RULES` in `src/vigil/rules/__init__.py`. Write tests. Done.
+Then add it to `DEFAULT_RULES` in `src/valca/rules/__init__.py`. Write tests. Done.
 
 ---
 

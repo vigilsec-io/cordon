@@ -1,6 +1,6 @@
 """Tests for cryptographic weakness rules: VGL-RAND001."""
 import pytest
-from vigil.rules.crypto import WeakRandomnessRule
+from valca.rules.crypto import WeakRandomnessRule
 
 
 @pytest.fixture

@@ -1,7 +1,7 @@
 """Tests for VGL-S011 — shell script secret injection (ps aux leak)."""
 from pathlib import Path
 import pytest
-from vigil.rules.shell import ShellSecretInjectionRule
+from valca.rules.shell import ShellSecretInjectionRule
 
 rule = ShellSecretInjectionRule()
 

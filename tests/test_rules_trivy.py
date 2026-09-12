@@ -3,8 +3,8 @@ from unittest.mock import patch, MagicMock
 import json
 import subprocess
 import pytest
-from vigil.rules.trivy import TrivyIacScanRule
-from vigil.rules.base import Severity
+from valca.rules.trivy import TrivyIacScanRule
+from valca.rules.base import Severity
 
 rule = TrivyIacScanRule()
 

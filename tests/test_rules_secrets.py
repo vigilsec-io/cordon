@@ -1,11 +1,11 @@
 import pytest
 from pathlib import Path
-from vigil.rules.secrets import (
+from valca.rules.secrets import (
     AwsAccessKeyRule, HardcodedPasswordRule, HardcodedApiKeyRule,
     EvalInjectionRule, ShellTrueRule, OsSystemRule, CredentialUrlRule,
     InsecureConfigDefaultRule,
 )
-from vigil.rules.base import Severity
+from valca.rules.base import Severity
 
 
 def test_aws_key_detected(tmp_path):

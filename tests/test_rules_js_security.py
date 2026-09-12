@@ -1,6 +1,6 @@
 """Tests for JS/TS security rules: VGL-JS001, VGL-JS004."""
 import pytest
-from vigil.rules.js_security import ProcessEnvFallbackRule, JsEvalNewFunctionRule
+from valca.rules.js_security import ProcessEnvFallbackRule, JsEvalNewFunctionRule
 
 
 @pytest.fixture

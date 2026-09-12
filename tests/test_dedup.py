@@ -1,8 +1,8 @@
 """Tests for reporter deduplication: ticket #2."""
 from pathlib import Path
 import pytest
-from vigil.reporter import dedup_findings
-from vigil.rules.base import Finding, Severity
+from valca.reporter import dedup_findings
+from valca.rules.base import Finding, Severity
 
 
 def _f(rule_id, sev, msg="msg", line=None, category=None):

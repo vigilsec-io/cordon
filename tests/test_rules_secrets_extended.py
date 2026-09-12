@@ -1,9 +1,9 @@
 import pytest
-from vigil.rules.secrets import (
+from valca.rules.secrets import (
     JwtSecretRule, PemPrivateKeyRule, CredentialUrlRule,
     StripeLiveKeyRule, SlackTokenRule, GenericProviderKeyRule,
 )
-from vigil.rules.base import Severity
+from valca.rules.base import Severity
 
 jwt = JwtSecretRule()
 pem = PemPrivateKeyRule()

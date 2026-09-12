@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "valca"
-version = "0.3.3"
+version = "0.4.0"
 description = "AI coding security co-pilot — blocks insecure code at generation time"
 readme = "README.md"
 license = {file = "LICENSE"}
@@ -22,8 +22,8 @@ Issues = "https://github.com/vigilsec-io/cordon/issues"
 # `vigil` MUST remain until at least 1.0: plugin/hook.sh invokes it, and dropping it
 # would silently stop enforcement on every existing install — a fail-open outcome.
 [project.scripts]
-valca = "vigil.cli:main"
-vigil = "vigil.cli:main"
+valca = "valca.cli:main"
+vigil = "valca.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
