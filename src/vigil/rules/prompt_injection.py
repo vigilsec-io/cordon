@@ -24,6 +24,7 @@ _USER_INPUT = r"(?:user_input|user_query|user_message|user_prompt|user_content|"
 class UserInputInSystemPromptRule(Rule):
     """VGL-PI001: User input interpolated directly into the LLM system prompt."""
     id = "VGL-PI001"
+    name = "User input interpolated into the LLM system prompt"
     severity = Severity.CRITICAL
 
     _PAT = re.compile(
@@ -63,6 +64,7 @@ class UserInputInSystemPromptRule(Rule):
 class RawRequestAsLlmContentRule(Rule):
     """VGL-PI002: Raw HTTP request body used as LLM message content."""
     id = "VGL-PI002"
+    name = "Raw HTTP request body used as LLM message content"
     severity = Severity.HIGH
 
     _PAT = re.compile(
@@ -103,6 +105,7 @@ class RawRequestAsLlmContentRule(Rule):
 class TemplateInjectionInPromptRule(Rule):
     """VGL-PI003: str.format() or % formatting used to build LLM prompts with user data."""
     id = "VGL-PI003"
+    name = "String formatting used to build prompts with user data"
     severity = Severity.HIGH
 
     _PAT = re.compile(
@@ -142,6 +145,7 @@ class TemplateInjectionInPromptRule(Rule):
 class UnsanitizedToolOutputRule(Rule):
     """VGL-PI004: Tool/function output appended to conversation without sanitization."""
     id = "VGL-PI004"
+    name = "Tool output appended to the conversation without sanitization"
     severity = Severity.MEDIUM
 
     _PAT = re.compile(

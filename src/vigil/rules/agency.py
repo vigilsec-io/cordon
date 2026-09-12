@@ -27,6 +27,7 @@ _LLM_CALL = re.compile(
 class LlmShellExecRule(Rule):
     """VGL-A001: LLM output piped directly into shell execution."""
     id = "VGL-A001"
+    name = "LLM output piped into shell execution"
     severity = Severity.CRITICAL
 
     _PAT = re.compile(
@@ -63,6 +64,7 @@ class LlmShellExecRule(Rule):
 class AutoApprovalBypassRule(Rule):
     """VGL-A002: Hardcoded auto-approval — disables human-in-the-loop gate."""
     id = "VGL-A002"
+    name = "Hardcoded auto-approval disables human-in-the-loop"
     severity = Severity.HIGH
 
     _PAT = re.compile(
@@ -101,6 +103,7 @@ class AutoApprovalBypassRule(Rule):
 class UnboundedAgentLoopRule(Rule):
     """VGL-A003: Unbounded agentic loop — while True with LLM calls, no iteration limit."""
     id = "VGL-A003"
+    name = "Unbounded agent loop with no iteration limit"
     severity = Severity.HIGH
 
     _WHILE_TRUE = re.compile(r"^\s*while\s+True\s*:")
@@ -145,6 +148,7 @@ class UnboundedAgentLoopRule(Rule):
 class LlmOutputFileWriteRule(Rule):
     """VGL-A004: LLM response written directly to disk without validation."""
     id = "VGL-A004"
+    name = "LLM response written to disk without validation"
     severity = Severity.HIGH
 
     _PAT = re.compile(

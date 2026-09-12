@@ -27,6 +27,7 @@ def _is_k8s_manifest(path: Path) -> bool:
 
 class K8sSecurityRule(Rule):
     id = "VGL-K001"
+    name = "Privileged container or host namespace access"
     severity = Severity.CRITICAL
 
     def applies_to(self, path: Path) -> bool:

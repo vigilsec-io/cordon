@@ -42,6 +42,7 @@ _SHELL_PAT = re.compile(
 class McpToolPoisoningRule(Rule):
     """VGL-MCP001: Prompt injection embedded in MCP tool description."""
     id = "VGL-MCP001"
+    name = "Prompt injection embedded in MCP tool description"
     severity = Severity.CRITICAL
 
     def applies_to(self, path: Path) -> bool:
@@ -76,6 +77,7 @@ class McpToolPoisoningRule(Rule):
 class McpDynamicDescriptionRule(Rule):
     """VGL-MCP002: MCP tool description built from user-controlled data."""
     id = "VGL-MCP002"
+    name = "MCP tool description built from user-controlled data"
     severity = Severity.HIGH
 
     def applies_to(self, path: Path) -> bool:
@@ -109,6 +111,7 @@ class McpDynamicDescriptionRule(Rule):
 class McpShellToolRule(Rule):
     """VGL-MCP003: Shell execution inside an MCP tool handler without sandbox."""
     id = "VGL-MCP003"
+    name = "Shell execution in an MCP tool handler without a sandbox"
     severity = Severity.HIGH
 
     _SANDBOX = re.compile(

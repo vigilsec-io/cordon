@@ -24,6 +24,7 @@ def _iam_file(path: Path) -> bool:
 
 class IamWildcardRule(Rule):
     id = "VGL-IAM001"
+    name = "IAM policy wildcard in Action or Resource"
     severity = Severity.CRITICAL
 
     def applies_to(self, path: Path) -> bool:

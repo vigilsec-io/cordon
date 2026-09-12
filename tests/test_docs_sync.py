@@ -112,3 +112,20 @@ def _commands_from_parser() -> set[str]:
 
 def _mentions_command(text: str, command: str) -> bool:
     return bool(re.search(rf"\b(valca|vigil)\s+{re.escape(command)}\b", text))
+
+
+def test_every_rule_has_a_description() -> None:
+    """A catalogue row with an empty description is worse than no row.
+
+    Thirteen rules — the whole AI-agent, MCP and prompt-injection set — shipped
+    with an empty `name`, so the published catalogue rendered blank cells for
+    exactly the rules the product is differentiated on.
+    """
+    unnamed = sorted(r.id for r in DEFAULT_RULES if not getattr(r, "name", "").strip())
+    assert not unnamed, f"Rules with no description: {unnamed}"
+
+
+def test_catalogue_has_no_empty_cells() -> None:
+    """Guard the rendered table, not just the source objects."""
+    blank = re.findall(r"^\| (VGL-[A-Z]+\d+) \| [A-Z]+ \|\s*\|$", README.read_text(), re.M)
+    assert not blank, f"Catalogue rows with an empty 'What it catches' column: {blank}"

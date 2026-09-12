@@ -242,20 +242,20 @@ This catalogue is generated from the rule registry — it cannot drift from the 
 
 | Rule | Severity | What it catches |
 |------|----------|----------------|
-| VGL-A001 | CRITICAL |  |
-| VGL-A002 | HIGH |  |
-| VGL-A003 | HIGH |  |
-| VGL-A004 | HIGH |  |
+| VGL-A001 | CRITICAL | LLM output piped into shell execution |
+| VGL-A002 | HIGH | Hardcoded auto-approval disables human-in-the-loop |
+| VGL-A003 | HIGH | Unbounded agent loop with no iteration limit |
+| VGL-A004 | HIGH | LLM response written to disk without validation |
 
 
 ### AI Agent — Prompt Injection (4 rules)
 
 | Rule | Severity | What it catches |
 |------|----------|----------------|
-| VGL-PI001 | CRITICAL |  |
-| VGL-PI002 | HIGH |  |
-| VGL-PI003 | HIGH |  |
-| VGL-PI004 | MEDIUM |  |
+| VGL-PI001 | CRITICAL | User input interpolated into the LLM system prompt |
+| VGL-PI002 | HIGH | Raw HTTP request body used as LLM message content |
+| VGL-PI003 | HIGH | String formatting used to build prompts with user data |
+| VGL-PI004 | MEDIUM | Tool output appended to the conversation without sanitization |
 
 
 ### Authentication & Session (4 rules)
@@ -282,7 +282,7 @@ This catalogue is generated from the rule registry — it cannot drift from the 
 
 | Rule | Severity | What it catches |
 |------|----------|----------------|
-| VGL-K001 | CRITICAL |  |
+| VGL-K001 | CRITICAL | Privileged container or host namespace access |
 | VGL-K002 | CRITICAL | allowPrivilegeEscalation enabled in Kubernetes securityContext |
 | VGL-K003 | HIGH | Dangerous Linux capabilities added in Kubernetes securityContext |
 | VGL-K004 | HIGH | Sensitive hostPath volume in Kubernetes manifest |
@@ -330,9 +330,9 @@ This catalogue is generated from the rule registry — it cannot drift from the 
 
 | Rule | Severity | What it catches |
 |------|----------|----------------|
-| VGL-MCP001 | CRITICAL |  |
-| VGL-MCP002 | HIGH |  |
-| VGL-MCP003 | HIGH |  |
+| VGL-MCP001 | CRITICAL | Prompt injection embedded in MCP tool description |
+| VGL-MCP002 | HIGH | MCP tool description built from user-controlled data |
+| VGL-MCP003 | HIGH | Shell execution in an MCP tool handler without a sandbox |
 
 
 ### JavaScript / TypeScript (2 rules)
@@ -369,7 +369,7 @@ This catalogue is generated from the rule registry — it cannot drift from the 
 
 | Rule | Severity | What it catches |
 |------|----------|----------------|
-| VGL-IAM001 | CRITICAL |  |
+| VGL-IAM001 | CRITICAL | IAM policy wildcard in Action or Resource |
 
 
 ### Python (1 rule)
