@@ -91,6 +91,24 @@ vigil scan ./my-project/ --severity HIGH
 vigil feedback
 ```
 
+**Review what has been caught over time.** Both commands read the local scan
+history — nothing leaves your machine.
+
+```bash
+# Findings log — what was caught, where, and when
+valca log                              # 20 most recent findings
+valca log --severity CRITICAL          # only criticals
+valca log --project api --since 2026-09-01
+valca log --limit 100 --format json    # for dashboards
+
+# Aggregate stats — rule frequency, severity mix, precision per rule
+valca stats
+valca stats --format json
+```
+
+`valca stats` reports how often each rule fires and how often you suppressed it,
+so rules with poor precision in *your* codebase are visible rather than guessed at.
+
 **Exit codes:**
 
 | Code | Meaning |

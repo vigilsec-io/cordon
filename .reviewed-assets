@@ -1,0 +1,10 @@
+# Binary assets reviewed manually for PII and approved for publication.
+# No automated scanner can read inside these files — each line is a human
+# attestation that every frame was checked for usernames, hostnames and
+# workspace paths.
+#
+# Format: one repo-relative path per line.
+#
+# docs/demo-gha.gif — reviewed 2026-09-12: no paths, no usernames, no directory
+# listings. Shows the product name "Vigil" (pre-rename), tracked separately.
+docs/demo-gha.gif
