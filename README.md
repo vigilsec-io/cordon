@@ -1,8 +1,11 @@
-# Vigil
+# Valca
 
 **AI coding security co-pilot — blocks insecure code at the moment of generation.**
 
-Vigil intercepts every file an AI coding assistant writes and blocks it if CRITICAL or HIGH security findings are detected — before the file hits disk. It's the only tool that operates at generation time rather than post-commit.
+> **Formerly published as `vigilsec`.** The package is now `valca`. Both the `valca` and `vigil`
+> commands work, so existing hooks and scripts keep running unchanged.
+
+Valca intercepts every file an AI coding assistant writes and blocks it if CRITICAL or HIGH security findings are detected — before the file hits disk. It's the only tool that operates at generation time rather than post-commit.
 
 ```
 AI writes file → vigil scan → exit 2 → Claude Code blocks the write
@@ -28,16 +31,41 @@ The correct form is `"127.0.0.1:5432:5432"`. Vigil catches it. Nothing else does
 ## Install
 
 ```bash
-pip install vigilsec
+pip install valca
 ```
 
 **Wire the Claude Code hook (one time):**
 
 ```bash
-vigil init --global
+valca init --global     # `vigil init --global` also works
 ```
 
 That's it. Every file Claude Code writes is now scanned before it saves. Reload Claude Code to activate.
+
+---
+
+## Network access
+
+Valca's core scanning is fully offline — the package has **zero runtime dependencies** and the
+engine never sends your code, file paths, or findings anywhere.
+
+Three rules do reach the network, because checking whether a dependency is vulnerable or fabricated
+is impossible offline. When a manifest (`requirements.txt`, `package.json`, lockfiles) is scanned,
+these rules send **package names and version strings only** to:
+
+| Host | Used by | What is sent |
+|---|---|---|
+| `api.osv.dev` | VGL-PKG001 (known CVE in a pinned version) | package name + version |
+| `pypi.org` | VGL-PKG002/003/004 (hallucinated, stale, or suspicious package) | package name |
+| `registry.npmjs.org` | VGL-PKG002/003/004 | package name |
+
+Your source code, file contents, file paths, and scan results are never transmitted. If your
+dependency inventory is itself sensitive, turn these rules off in `.vigilrc` and Valca runs
+completely offline:
+
+```ini
+disabled_rules = ["VGL-PKG001", "VGL-PKG002", "VGL-PKG003", "VGL-PKG004"]
+```
 
 ---
 
@@ -78,7 +106,7 @@ vigil feedback
 **Blocking a vulnerable GitHub Actions workflow at write time:**
 
 <!-- GIF: terminal showing claude writing ai-review.yml → vigil hook fires → BLOCKED + VGL-GHA009 CRITICAL → fix applied → clean -->
-![Vigil blocking Comment and Control attack](docs/demo-gha.gif)
+![Valca blocking a Comment-and-Control attack](https://raw.githubusercontent.com/vigilsec-io/cordon/main/docs/demo-gha.gif)
 
 In April 2026, researchers found that all three major AI coding agents (Claude Code, Gemini CLI, Copilot) could be hijacked to exfiltrate `ANTHROPIC_API_KEY` and `GITHUB_TOKEN` via a hidden HTML comment in a GitHub issue. CVSS 9.4. No special access required.
 
@@ -270,7 +298,7 @@ Add Vigil to any CI pipeline — copy `vigil-action/workflow-template.yml` into 
 
 ```yaml
 - name: Install Vigil
-  run: pip install vigilsec --quiet
+  run: pip install valca --quiet
 
 - name: Scan with Vigil
   run: vigil scan . --no-color

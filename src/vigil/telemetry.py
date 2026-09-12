@@ -46,8 +46,11 @@ def record(
         return
     try:
         _EVENTS_FILE.parent.mkdir(parents=True, exist_ok=True)
+        is_new_file = not _EVENTS_FILE.exists()
         ts = datetime.now(timezone.utc).isoformat()
         with _EVENTS_FILE.open("a") as fh:
+            if is_new_file:
+                os.chmod(_EVENTS_FILE, 0o600)
             for f in findings:
                 ext = f.file_path.suffix if f.file_path else ""
                 event: dict = {
