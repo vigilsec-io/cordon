@@ -1,4 +1,4 @@
-name: Vigil Security Scan
+name: Valca Security Scan
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
 
 jobs:
   vigil:
-    name: Vigil Security
+    name: Valca Security
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -23,19 +23,19 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install Vigil
+      - name: Install Valca
         run: pip install vigilsec --quiet
 
-      - name: Scan with Vigil
+      - name: Scan with Valca
         id: vigil
         run: |
-          vigil scan . --no-color
+          valca scan . --no-color
         # Remove `continue-on-error` to block PRs on CRITICAL/HIGH findings
         continue-on-error: true
 
       - name: Generate SARIF report
         if: always()
-        run: vigil scan . --format sarif > vigil-results.sarif
+        run: valca scan . --format sarif > vigil-results.sarif
 
       - name: Upload SARIF to GitHub Code Scanning
         if: always()

@@ -1,6 +1,6 @@
 {
   "name": "vigil-security",
-  "displayName": "Vigil Security",
+  "displayName": "Valca Security",
   "description": "AI coding security co-pilot — blocks insecure code at generation time. Catches docker-compose port exposure, secrets, AI agent patterns, and more.",
   "version": "0.2.1",
   "publisher": "vigilsec",
@@ -21,20 +21,20 @@
     "commands": [
       {
         "command": "vigil.scanFile",
-        "title": "Vigil: Scan Current File"
+        "title": "Valca: Scan Current File"
       },
       {
         "command": "vigil.scanWorkspace",
-        "title": "Vigil: Scan Workspace"
+        "title": "Valca: Scan Workspace"
       }
     ],
     "configuration": {
-      "title": "Vigil Security",
+      "title": "Valca Security",
       "properties": {
         "vigil.enabled": {
           "type": "boolean",
           "default": true,
-          "description": "Enable Vigil security scanning."
+          "description": "Enable Valca security scanning."
         },
         "vigil.scanOnSave": {
           "type": "boolean",

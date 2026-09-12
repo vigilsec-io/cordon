@@ -1,4 +1,4 @@
-"""Anonymous, local-only telemetry for Vigil.
+"""Anonymous, local-only telemetry for Valca.
 
 Collects only: rule_id, severity, file_ext, timestamp, fp flag.
 Never: file path, code snippet, finding message, or any user-identifiable data.
@@ -7,7 +7,7 @@ Stored at ~/.vigil/events.jsonl (line-delimited JSON).
 Opt-out: set VIGIL_NO_TELEMETRY=1 or add `telemetry = false` to .vigilrc.
 
 Events are local-only by default — no network calls are made in this module.
-`vigil stats` and `vigil stats --format json` read events.jsonl for display.
+`valca stats` and `valca stats --format json` read events.jsonl for display.
 """
 from __future__ import annotations
 

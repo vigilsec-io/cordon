@@ -1,18 +1,18 @@
-# Contributing to Vigil
+# Contributing to Valca
 
-Thanks for your interest. Vigil is a security scanner for AI-agent configurations and
+Thanks for your interest. Valca is a security scanner for AI-agent configurations and
 infrastructure-as-code, and contributions — especially new detection rules and false-positive
 reports — are genuinely valuable.
 
 Please read the **[licensing note](#licensing-and-contributor-terms)** before opening a pull
-request. Vigil is source-available under the Business Source License 1.1, not a permissive
+request. Valca is source-available under the Business Source License 1.1, not a permissive
 open-source licence, and that affects contribution terms.
 
 ## Ways to contribute
 
 | Type | Where to start |
 |---|---|
-| **False positive report** | Open a Bug issue. Include the exact snippet Vigil flagged. These are the highest-value reports. |
+| **False positive report** | Open a Bug issue. Include the exact snippet Valca flagged. These are the highest-value reports. |
 | **New detection rule** | Open a `[RULE-REQUEST]` issue **first** so the rule ID and scope can be agreed. |
 | **Bug fix** | PR directly, with a regression test. |
 | **Docs** | PR directly. |
@@ -29,7 +29,7 @@ pytest -q                 # full suite must pass before you open a PR
 
 ## Workflow
 
-Vigil uses the standard fork-and-pull-request model. Direct pushes to `main` are blocked.
+Valca uses the standard fork-and-pull-request model. Direct pushes to `main` are blocked.
 
 1. **Fork** the repository to your own account
 2. **Branch** from `main` — `fix/<short-description>` or `rule/VGL-XXX000`
@@ -94,11 +94,11 @@ git commit -s -m "your message"
 
 ## Reporting security issues
 
-**Do not open a public issue for a vulnerability in Vigil.** See [SECURITY.md](SECURITY.md).
+**Do not open a public issue for a vulnerability in Valca.** See [SECURITY.md](SECURITY.md).
 
 ## Licensing and contributor terms
 
-Vigil is licensed under the **Business Source License 1.1**. It is source-available: you may read,
+Valca is licensed under the **Business Source License 1.1**. It is source-available: you may read,
 modify and use it under the terms in [LICENSE](LICENSE), but **commercial use requires a separate
 licence agreement**.
 

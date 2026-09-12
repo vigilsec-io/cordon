@@ -8,7 +8,7 @@
 Valca intercepts every file an AI coding assistant writes and blocks it if CRITICAL or HIGH security findings are detected — before the file hits disk. It's the only tool that operates at generation time rather than post-commit.
 
 ```
-AI writes file → vigil scan → exit 2 → Claude Code blocks the write
+AI writes file → valca scan → exit 2 → Claude Code blocks the write
 ```
 
 ---
@@ -24,7 +24,7 @@ ports:
   - "5432:5432"   # ← binds to 0.0.0.0, bypasses UFW, reachable from anywhere
 ```
 
-The correct form is `"127.0.0.1:5432:5432"`. Vigil catches it. Nothing else does.
+The correct form is `"127.0.0.1:5432:5432"`. Valca catches it. Nothing else does.
 
 ---
 
@@ -37,7 +37,7 @@ pip install valca
 **Wire the Claude Code hook (one time):**
 
 ```bash
-valca init --global     # `vigil init --global` also works
+valca init --global     # `valca init --global` also works
 ```
 
 That's it. Every file Claude Code writes is now scanned before it saves. Reload Claude Code to activate.
@@ -73,22 +73,22 @@ disabled_rules = ["VGL-PKG001", "VGL-PKG002", "VGL-PKG003", "VGL-PKG004"]
 
 ```bash
 # Scan a single file
-vigil scan docker-compose.yml
+valca scan docker-compose.yml
 
 # Scan a directory
-vigil scan ./my-project/
+valca scan ./my-project/
 
 # JSON output (for CI / dashboards)
-vigil scan ./my-project/ --format json
+valca scan ./my-project/ --format json
 
 # SARIF output (for GitHub Advanced Security)
-vigil scan ./my-project/ --format sarif > results.sarif
+valca scan ./my-project/ --format sarif > results.sarif
 
 # Only report HIGH and above
-vigil scan ./my-project/ --severity HIGH
+valca scan ./my-project/ --severity HIGH
 
 # Open feedback & waitlist form
-vigil feedback
+valca feedback
 ```
 
 **Review what has been caught over time.** Both commands read the local scan
@@ -128,7 +128,7 @@ so rules with poor precision in *your* codebase are visible rather than guessed 
 
 In April 2026, researchers found that all three major AI coding agents (Claude Code, Gemini CLI, Copilot) could be hijacked to exfiltrate `ANTHROPIC_API_KEY` and `GITHUB_TOKEN` via a hidden HTML comment in a GitHub issue. CVSS 9.4. No special access required.
 
-Vigil catches the vulnerable workflow (`issues:` trigger + AI agent + API key in env) before it reaches git — the only tool that does.
+Valca catches the vulnerable workflow (`issues:` trigger + AI agent + API key in env) before it reaches git — the only tool that does.
 
 → [Full writeup: The Attack That Steals Your API Keys Through a GitHub Issue Comment](https://medium.com/@rjbdjnf/the-attack-that-steals-your-api-keys-through-a-github-issue-comment-b0301c1906dc)
 
@@ -413,7 +413,7 @@ exclude_paths  = ["vendor", "legacy"]
 telemetry      = false               # opt out of anonymous local telemetry
 ```
 
-Vigil walks up the directory tree to find the nearest `.vigilrc`. Child config always wins over parent. Monorepos can have per-project overrides alongside a workspace default.
+Valca walks up the directory tree to find the nearest `.vigilrc`. Child config always wins over parent. Monorepos can have per-project overrides alongside a workspace default.
 
 **Inline suppression** — for a specific line you've reviewed and accepted:
 
@@ -427,7 +427,7 @@ Same pattern as `# noqa` (flake8) and `# nosec` (bandit).
 
 ## Opt-out
 
-Vigil collects anonymous, local-only telemetry: rule ID, severity, and file extension. No file paths, no code, no identifiable data. Stored at `~/.vigil/events.jsonl` — never sent anywhere.
+Valca collects anonymous, local-only telemetry: rule ID, severity, and file extension. No file paths, no code, no identifiable data. Stored at `~/.vigil/events.jsonl` — never sent anywhere.
 
 Opt out permanently:
 
@@ -480,14 +480,14 @@ Then add it to `DEFAULT_RULES` in `src/vigil/rules/__init__.py`. Write tests. Do
 
 ## GitHub Actions
 
-Add Vigil to any CI pipeline — copy `vigil-action/workflow-template.yml` into your project's `.github/workflows/vigil.yml`:
+Add Valca to any CI pipeline — copy `vigil-action/workflow-template.yml` into your project's `.github/workflows/vigil.yml`:
 
 ```yaml
-- name: Install Vigil
+- name: Install Valca
   run: pip install valca --quiet
 
-- name: Scan with Vigil
-  run: vigil scan . --no-color
+- name: Scan with Valca
+  run: valca scan . --no-color
 
 - name: Upload SARIF to GitHub Code Scanning
   uses: github/codeql-action/upload-sarif@v3
@@ -519,8 +519,8 @@ pytest tests/ -v
 
 ## Feedback
 
-Found a false positive? Want a rule that doesn't exist yet? Building with AI agents and hitting patterns Vigil should catch?
+Found a false positive? Want a rule that doesn't exist yet? Building with AI agents and hitting patterns Valca should catch?
 
 [Open an issue → github.com/vigilsec-io/cordon/issues](https://github.com/vigilsec-io/cordon/issues)
 
-Or: `vigil feedback`
+Or: `valca feedback`

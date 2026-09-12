@@ -1,5 +1,5 @@
 name: "[RULE-REQUEST] New detection rule"
-description: Propose a new security rule for Vigil to detect
+description: Propose a new security rule for Valca to detect
 title: "[RULE-REQUEST] "
 labels: ["enhancement", "rule-request"]
 body:
@@ -30,7 +30,7 @@ body:
     id: coverage
     attributes:
       label: Do existing tools catch this?
-      description: Checkov, Trivy, Snyk, Semgrep, others. If they do, say what Vigil would add.
+      description: Checkov, Trivy, Snyk, Semgrep, others. If they do, say what Valca would add.
     validations: {required: true}
   - type: input
     id: reference

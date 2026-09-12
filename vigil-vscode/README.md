@@ -1,8 +1,8 @@
-# Vigil Security
+# Valca Security
 
 **AI coding security co-pilot — catches insecure code the moment your AI writes it.**
 
-Vigil scans every file your AI coding assistant saves and shows security findings inline as squiggles and Problems — before the code ever runs.
+Valca scans every file your AI coding assistant saves and shows security findings inline as squiggles and Problems — before the code ever runs.
 
 ---
 
@@ -17,16 +17,16 @@ ports:
   - "5432:5432"   # binds to 0.0.0.0, bypasses UFW
 ```
 
-The correct form is `"127.0.0.1:5432:5432"`. Vigil catches it instantly on save.
+The correct form is `"127.0.0.1:5432:5432"`. Valca catches it instantly on save.
 
 ---
 
 ## How It Works
 
 1. You (or your AI) save a file
-2. Vigil runs `vigil scan` in the background
+2. Valca runs `valca scan` in the background
 3. Findings appear as inline squiggles + Problems panel entries
-4. Status bar shows `⊗ Vigil: 2 CRITICAL/HIGH` or `✓ Vigil` (clean)
+4. Status bar shows `⊗ Valca: 2 CRITICAL/HIGH` or `✓ Valca` (clean)
 
 ---
 
@@ -90,8 +90,8 @@ auto_approve = True  # vigil: ignore
 
 Open Command Palette (`Cmd+Shift+P`):
 
-- **Vigil: Scan Current File** — scan the active file immediately
-- **Vigil: Scan Workspace** — scan all files in the workspace
+- **Valca: Scan Current File** — scan the active file immediately
+- **Valca: Scan Workspace** — scan all files in the workspace
 
 ---
 

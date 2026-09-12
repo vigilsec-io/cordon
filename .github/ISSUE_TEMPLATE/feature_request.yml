@@ -1,5 +1,5 @@
 name: Feature request
-description: Suggest an improvement to Vigil (not a new rule)
+description: Suggest an improvement to Valca (not a new rule)
 labels: ["enhancement"]
 body:
   - type: markdown

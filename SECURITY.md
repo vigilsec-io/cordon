@@ -1,6 +1,6 @@
 # Security Policy
 
-## Reporting a vulnerability in Vigil
+## Reporting a vulnerability in Valca
 
 **Please do not report security vulnerabilities through public GitHub issues.**
 
@@ -13,7 +13,7 @@ Please include:
 - The type of issue (e.g. arbitrary code execution during a scan, path traversal, prompt injection
   via a scanned file, denial of service on a crafted input)
 - Full paths of the source files involved
-- A minimal reproducer — ideally a file that Vigil scans
+- A minimal reproducer — ideally a file that Valca scans
 - The impact, and how an attacker might exploit it
 
 ### What to expect
@@ -32,25 +32,25 @@ Credit is given to reporters in the advisory unless you ask otherwise.
 **In scope** — anything in this repository: the scanner engine, rule implementations, the CLI, the
 Claude Code plugin hook, the GitHub Action, and the VS Code extension.
 
-Vigil parses untrusted input by design — it scans repositories that may be hostile. Issues where a
-crafted input file causes Vigil to execute code, escape its scan directory, leak environment
+Valca parses untrusted input by design — it scans repositories that may be hostile. Issues where a
+crafted input file causes Valca to execute code, escape its scan directory, leak environment
 variables, or hang indefinitely are all in scope and are treated seriously.
 
 **Out of scope**
 
 - **False positives and false negatives in detection rules.** These are correctness bugs, not
   vulnerabilities — please open a normal issue. They are still very welcome.
-- Vulnerabilities in a project that Vigil *scans*. Report those to that project.
+- Vulnerabilities in a project that Valca *scans*. Report those to that project.
 - Findings that require a pre-compromised host or a malicious maintainer.
 
 ## Supported versions
 
-Vigil is pre-1.0. Security fixes are applied to `main` and released from there. Please confirm an
+Valca is pre-1.0. Security fixes are applied to `main` and released from there. Please confirm an
 issue reproduces against the current `main` before reporting.
 
-## How Vigil handles vulnerabilities it discovers in other projects
+## How Valca handles vulnerabilities it discovers in other projects
 
-Vigil is a detection tool, and its rules surface real issues in third-party repositories. When
+Valca is a detection tool, and its rules surface real issues in third-party repositories. When
 maintainers of this project report such findings upstream, they follow coordinated disclosure:
 
 1. Report privately to the affected project — via its own security policy, or GitHub private
@@ -60,5 +60,5 @@ maintainers of this project report such findings upstream, they follow coordinat
    static analysis of published code only
 4. Request a CVE where the finding warrants one, and credit the affected maintainers' fix
 
-If a Vigil rule flagged something in your project and you believe it is a false positive, please open
+If a Valca rule flagged something in your project and you believe it is a false positive, please open
 an issue — that feedback directly improves the rule corpus.

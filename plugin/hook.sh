@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Vigil — Claude Code PostToolUse security hook.
-# Reads the written file path from hook stdin (JSON), runs vigil scan on it.
+# Valca — Claude Code PostToolUse security hook.
+# Reads the written file path from hook stdin (JSON), runs valca scan on it.
 # Exits 2 on CRITICAL/HIGH to block the write and surface findings inline.
 #
 # Install: add to .claude/settings.json PostToolUse hook on Write|Edit matcher,
@@ -24,6 +24,8 @@ fi
 # Locate vigil executable
 VIGIL=""
 for candidate in \
+    "$(command -v valca 2>/dev/null)" \
+    "$HOME/.valca/venv/bin/valca" \
     "$HOME/.vigil/venv/bin/vigil" \
     "/usr/local/bin/vigil" \
     "/opt/homebrew/bin/vigil" \
@@ -40,5 +42,5 @@ if [ -n "$VIGIL" ]; then
     exit $?
 fi
 
-# vigil not found — install with: pip install vigilsec && vigil init
+# vigil not found — install with: pip install valca && valca init
 exit 0

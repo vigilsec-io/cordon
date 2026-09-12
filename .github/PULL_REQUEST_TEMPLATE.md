@@ -34,7 +34,7 @@ Closes #
 
 ## Verification
 
-<!-- Paste the before/after Vigil output, or the failing test that now passes. -->
+<!-- Paste the before/after Valca output, or the failing test that now passes. -->
 
 ```
 ```

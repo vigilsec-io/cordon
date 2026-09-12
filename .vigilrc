@@ -1,5 +1,5 @@
-# Vigil config for the vigil project itself.
-# rules/   — rule name strings match the patterns Vigil detects (self-referential)
+# Valca config for the Valca project itself.
+# rules/   — rule name strings match the patterns Valca detects (self-referential)
 # tests/   — test fixtures intentionally contain insecure code strings
 # plugin/  — manifest.json lists rule names, not executable code
 exclude_paths = ["rules", "fixtures", "tests", "plugin"]

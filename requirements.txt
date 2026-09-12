@@ -1,4 +1,4 @@
-# Vigil core has zero required runtime dependencies — stdlib only.
+# Valca core has zero required runtime dependencies — stdlib only.
 # External tools are invoked as subprocesses when present:
 #
 #   pip-audit  →  pip install pip-audit          (Python CVE scanning)

@@ -1,4 +1,4 @@
-"""Tests for vigil init — hook wiring and permission healing."""
+"""Tests for valca init — hook wiring and permission healing."""
 import json
 from pathlib import Path
 from unittest.mock import patch
@@ -22,7 +22,7 @@ def test_init_fixes_execute_permission(hook_sh, tmp_path):
          patch("vigil.cli.Path.cwd", return_value=tmp_path):
         _run_init(global_install=False)
 
-    assert hook_sh.stat().st_mode & 0o111, "hook.sh should be executable after vigil init"
+    assert hook_sh.stat().st_mode & 0o111, "hook.sh should be executable after valca init"
 
 
 def test_init_hook_already_executable_no_change(hook_sh, tmp_path):
