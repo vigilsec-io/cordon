@@ -169,7 +169,7 @@ class GenericProviderKeyRule(_GrepRule):
 
 
 class InsecureConfigDefaultRule(_GrepRule):
-    id = "VGL-S011"
+    id = "VGL-S012"
     name = "Insecure placeholder default for security-critical config"
     severity = Severity.HIGH
     # Two forms:

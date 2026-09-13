@@ -20,6 +20,28 @@ def _finding(rule_id="VGL-D001", sev=Severity.CRITICAL, file_ext=".yml"):
     )
 
 
+def test_events_file_created_with_owner_only_permissions(tmp_path):
+    """Ticket #58 — events.jsonl must be 600 (owner read/write only)."""
+    events_file = tmp_path / "events.jsonl"
+    with patch.object(telemetry, "_EVENTS_FILE", events_file):
+        telemetry.record([_finding()], telemetry_enabled=True)
+
+    mode = events_file.stat().st_mode & 0o777
+    assert mode == 0o600
+
+
+def test_existing_permissions_not_reset_on_append(tmp_path):
+    """chmod only happens on creation — don't fight a user's later chmod."""
+    events_file = tmp_path / "events.jsonl"
+    with patch.object(telemetry, "_EVENTS_FILE", events_file):
+        telemetry.record([_finding()], telemetry_enabled=True)
+        os.chmod(events_file, 0o644)
+        telemetry.record([_finding()], telemetry_enabled=True)
+
+    mode = events_file.stat().st_mode & 0o777
+    assert mode == 0o644
+
+
 def test_record_writes_event(tmp_path):
     events_file = tmp_path / "events.jsonl"
     with patch.object(telemetry, "_EVENTS_FILE", events_file):

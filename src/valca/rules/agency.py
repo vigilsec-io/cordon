@@ -129,20 +129,74 @@ class UnboundedAgentLoopRule(Rule):
         lines = text.splitlines()
         findings = []
         for i, line in enumerate(lines, 1):
-            if self._WHILE_TRUE.match(line):
-                findings.append(Finding(
-                    rule_id=self.id,
-                    severity=self.severity,
-                    message="Unbounded 'while True' loop with LLM calls — no iteration limit found",
-                    file_path=path,
-                    line=i,
-                    snippet=line.strip(),
-                    fix=(
-                        "Add max_iterations and a kill-switch check at the top of the loop. "
-                        "Read the kill switch from SSM so it can be toggled without a deploy."
-                    ),
-                ))
+            if not self._WHILE_TRUE.match(line):
+                continue
+            # The LLM call must be reachable from THIS loop, not merely present
+            # somewhere in the file. Without this, any daemon keep-alive
+            # (`while True: await asyncio.sleep(60)`) in a module that also talks
+            # to an LLM was reported as an unbounded agent loop.
+            if not self._body_reaches_llm(lines, i - 1, text):
+                continue
+            findings.append(Finding(
+                rule_id=self.id,
+                severity=self.severity,
+                message="Unbounded 'while True' loop with LLM calls — no iteration limit found",
+                file_path=path,
+                line=i,
+                snippet=line.strip(),
+                fix=(
+                    "Add max_iterations and a kill-switch check at the top of the loop. "
+                    "Read the kill switch from SSM so it can be toggled without a deploy."
+                ),
+            ))
         return findings
+
+    @staticmethod
+    def _indent(line: str) -> int:
+        return len(line) - len(line.lstrip())
+
+    @classmethod
+    def _loop_body(cls, lines: list[str], start: int) -> str:
+        """Text of the block indented under the `while True:` at index `start`."""
+        base = cls._indent(lines[start])
+        body: list[str] = []
+        for line in lines[start + 1:]:
+            if not line.strip():
+                body.append(line)
+                continue
+            if cls._indent(line) <= base:
+                break
+            body.append(line)
+        return "\n".join(body)
+
+    @classmethod
+    def _body_reaches_llm(cls, lines: list[str], start: int, text: str) -> bool:
+        """
+        True if the loop body calls an LLM directly, or calls a function defined
+        in this file whose own body does.
+
+        One hop is deliberate. Real agent loops are usually `while True:
+        step = run_agent_turn()`, so body-only matching would miss them; chasing
+        the full call graph would need an import-resolving AST pass, which is far
+        more machinery than a lint rule warrants.
+        """
+        body = cls._loop_body(lines, start)
+        if _LLM_CALL.search(body):
+            return True
+        called = set(re.findall(r"\b(\w+)\s*\(", body))
+        if not called:
+            return False
+        for name in called:
+            # [ \t]* not \s* — \s matches newlines, so the anchor would slide to an
+            # earlier blank line and m.start() would point before the def.
+            m = re.search(rf"^[ \t]*(?:async[ \t]+)?def[ \t]+{re.escape(name)}[ \t]*\(",
+                          text, re.M)
+            if not m:
+                continue
+            fn_lines = text[m.start():].splitlines()
+            if _LLM_CALL.search(cls._loop_body(fn_lines, 0)):
+                return True
+        return False
 
 
 class LlmOutputFileWriteRule(Rule):

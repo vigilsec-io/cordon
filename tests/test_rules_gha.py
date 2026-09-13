@@ -1,10 +1,12 @@
-"""Tests for GitHub Actions advanced security rules: VGL-GHA001-002, GHA004-010."""
+"""Tests for GitHub Actions advanced security rules: VGL-GHA001-002, GHA004-014."""
 import pytest
 from valca.rules.gha import (
     GhaPwnRequestRule, GhaScriptInjectionRule, GhaSecretsInRunRule,
     GhaMissingPermissionsRule, GhaCachePoisoningRule,
     GhaSelfHostedOnPrRule, GhaWorkflowRunNoRefRule,
     GhaAiAgentUntrustedTriggerRule, GhaAiAgentForkGuardRule,
+    GhaAiAgentPromptInjectionRule, GhaAiAgentNoAllowedToolsRule,
+    GhaAiAgentNoMaxTurnsRule, GhaAiAgentWritePermissionsRule,
 )
 from valca.rules.base import Severity
 
@@ -535,6 +537,44 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 """
 
+_AI_ISSUES_MITIGATED = """\
+name: AI Review Hardened
+on:
+  issues:
+    types: [opened]
+permissions:
+  contents: read
+  issues: write
+jobs:
+  review:
+    if: contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'),
+                 github.event.issue.author_association)
+    runs-on: ubuntu-latest
+    steps:
+      - run: claude --allowedTools "Read,Grep" --print "Review this issue"
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+"""
+
+_AI_ISSUES_PARTIALLY_MITIGATED = """\
+name: AI Review Half Hardened
+on:
+  issues:
+    types: [opened]
+permissions:
+  contents: read
+  issues: write
+jobs:
+  review:
+    if: contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'),
+                 github.event.issue.author_association)
+    runs-on: ubuntu-latest
+    steps:
+      - run: claude --print "Review this issue"
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+"""
+
 
 class TestGhaAiAgentUntrustedTriggerRule:
     rule = GhaAiAgentUntrustedTriggerRule()
@@ -568,6 +608,26 @@ class TestGhaAiAgentUntrustedTriggerRule:
 
     def test_fix_mentions_comment_and_control(self, wf):
         assert "Comment and Control" in self.rule.check(wf(_AI_ISSUES_TRIGGER))[0].fix
+
+    def test_permissions_block_issues_write_not_falsely_flagged(self, wf):
+        # "issues: write" under permissions: is not a trigger definition —
+        # only "on: issues:" with nothing after the colon is.
+        wf_content = _AI_ISSUES_MITIGATED  # has both; still flags via the on: trigger
+        findings = self.rule.check(wf(wf_content))
+        assert findings and findings[0].line == 3  # the "on: issues:" line, not "issues: write"
+
+    def test_fully_mitigated_downgrades_to_medium(self, wf):
+        findings = self.rule.check(wf(_AI_ISSUES_MITIGATED))
+        assert findings and findings[0].severity == Severity.MEDIUM
+
+    def test_fully_mitigated_fix_mentions_advisory(self, wf):
+        findings = self.rule.check(wf(_AI_ISSUES_MITIGATED))
+        assert "advisory" in findings[0].fix.lower()
+
+    def test_partial_mitigation_stays_critical(self, wf):
+        # Missing --allowedTools — guard alone isn't enough to downgrade.
+        findings = self.rule.check(wf(_AI_ISSUES_PARTIALLY_MITIGATED))
+        assert findings and findings[0].severity == Severity.CRITICAL
 
     def test_does_not_apply_to_non_yml(self, tmp_path):
         assert not self.rule.applies_to(tmp_path / "main.py")
@@ -674,6 +734,275 @@ class TestGhaAiAgentForkGuardRule:
 
     def test_fix_mentions_fork_guard(self, wf):
         assert "head.repo" in self.rule.check(wf(_AI_PPT_NO_GUARD))[0].fix
+
+    def test_does_not_apply_to_non_yml(self, tmp_path):
+        assert not self.rule.applies_to(tmp_path / "config.py")
+
+
+# ── VGL-GHA011 — Untrusted event data interpolated into AI agent prompt ──────
+
+_AI_ISSUE_BODY_INLINE = """\
+name: AI Review
+on:
+  issues:
+    types: [opened]
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - run: claude --print "${{ github.event.issue.body }}"
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+"""
+
+_AI_ISSUE_BODY_VIA_ENV = """\
+name: AI Review
+on:
+  issues:
+    types: [opened]
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - run: claude --print "$ISSUE_BODY"
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+"""
+
+_AI_PR_TITLE_INLINE = """\
+name: AI Review
+on:
+  pull_request_target:
+    types: [opened]
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - run: claude --print "Review: ${{ github.event.pull_request.title }}"
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+"""
+
+_AI_EVENT_DATA_DIFFERENT_STEP = """\
+name: AI Review
+on:
+  issues:
+    types: [opened]
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "${{ github.event.issue.body }}" > issue.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: issue
+          path: issue.txt
+      - run: claude --print "Review the uploaded issue"
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+"""
+
+_AI_NO_EVENT_DATA = """\
+name: AI Review
+on:
+  issues:
+    types: [opened]
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - run: claude --print "Review this issue"
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+"""
+
+
+class TestGhaAiAgentPromptInjectionRule:
+    rule = GhaAiAgentPromptInjectionRule()
+
+    def test_detects_issue_body_inline(self, wf):
+        assert self.rule.check(wf(_AI_ISSUE_BODY_INLINE))
+
+    def test_detects_issue_body_via_env(self, wf):
+        assert self.rule.check(wf(_AI_ISSUE_BODY_VIA_ENV))
+
+    def test_detects_pr_title_inline(self, wf):
+        assert self.rule.check(wf(_AI_PR_TITLE_INLINE))
+
+    def test_event_data_in_different_step_not_flagged(self, wf):
+        # Event data and the agent call are in separate steps — no direct flow.
+        assert not self.rule.check(wf(_AI_EVENT_DATA_DIFFERENT_STEP))
+
+    def test_no_event_data_not_flagged(self, wf):
+        assert not self.rule.check(wf(_AI_NO_EVENT_DATA))
+
+    def test_vigil_ignore_suppresses(self, wf):
+        ignored = _AI_ISSUE_BODY_INLINE.replace(
+            'claude --print "${{ github.event.issue.body }}"',
+            'claude --print "${{ github.event.issue.body }}"  # vigil: ignore',
+        )
+        assert not self.rule.check(wf(ignored))
+
+    def test_finding_is_critical(self, wf):
+        assert self.rule.check(wf(_AI_ISSUE_BODY_INLINE))[0].severity == Severity.CRITICAL
+
+    def test_finding_has_correct_rule_id(self, wf):
+        assert self.rule.check(wf(_AI_ISSUE_BODY_INLINE))[0].rule_id == "VGL-GHA011"
+
+    def test_does_not_apply_to_non_yml(self, tmp_path):
+        assert not self.rule.applies_to(tmp_path / "config.py")
+
+
+# ── VGL-GHA012 — AI agent on untrusted trigger with no --allowedTools ────────
+
+_AI_NO_ALLOWED_TOOLS = _AI_ISSUES_TRIGGER  # baseline fixture has no --allowedTools
+
+_AI_WITH_ALLOWED_TOOLS = """\
+name: AI Review
+on:
+  issues:
+    types: [opened]
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - run: claude --allowedTools "Read,Grep" --print "Review this issue"
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+"""
+
+
+class TestGhaAiAgentNoAllowedToolsRule:
+    rule = GhaAiAgentNoAllowedToolsRule()
+
+    def test_detects_missing_allowed_tools(self, wf):
+        assert self.rule.check(wf(_AI_NO_ALLOWED_TOOLS))
+
+    def test_allowed_tools_present_clears(self, wf):
+        assert not self.rule.check(wf(_AI_WITH_ALLOWED_TOOLS))
+
+    def test_push_trigger_not_flagged(self, wf):
+        assert not self.rule.check(wf(_AI_PUSH_TRIGGER))
+
+    def test_no_ai_key_not_flagged(self, wf):
+        assert not self.rule.check(wf(_AI_NO_KEY))
+
+    def test_finding_is_high(self, wf):
+        assert self.rule.check(wf(_AI_NO_ALLOWED_TOOLS))[0].severity == Severity.HIGH
+
+    def test_finding_has_correct_rule_id(self, wf):
+        assert self.rule.check(wf(_AI_NO_ALLOWED_TOOLS))[0].rule_id == "VGL-GHA012"
+
+    def test_does_not_apply_to_non_yml(self, tmp_path):
+        assert not self.rule.applies_to(tmp_path / "config.py")
+
+
+# ── VGL-GHA013 — AI agent on untrusted trigger with no --max-turns ───────────
+
+_AI_NO_MAX_TURNS = _AI_ISSUES_TRIGGER  # baseline fixture has no --max-turns
+
+_AI_WITH_MAX_TURNS = """\
+name: AI Review
+on:
+  issues:
+    types: [opened]
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - run: claude --max-turns 10 --print "Review this issue"
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+"""
+
+
+class TestGhaAiAgentNoMaxTurnsRule:
+    rule = GhaAiAgentNoMaxTurnsRule()
+
+    def test_detects_missing_max_turns(self, wf):
+        assert self.rule.check(wf(_AI_NO_MAX_TURNS))
+
+    def test_max_turns_present_clears(self, wf):
+        assert not self.rule.check(wf(_AI_WITH_MAX_TURNS))
+
+    def test_push_trigger_not_flagged(self, wf):
+        assert not self.rule.check(wf(_AI_PUSH_TRIGGER))
+
+    def test_no_ai_key_not_flagged(self, wf):
+        assert not self.rule.check(wf(_AI_NO_KEY))
+
+    def test_finding_is_medium(self, wf):
+        assert self.rule.check(wf(_AI_NO_MAX_TURNS))[0].severity == Severity.MEDIUM
+
+    def test_finding_has_correct_rule_id(self, wf):
+        assert self.rule.check(wf(_AI_NO_MAX_TURNS))[0].rule_id == "VGL-GHA013"
+
+    def test_does_not_apply_to_non_yml(self, tmp_path):
+        assert not self.rule.applies_to(tmp_path / "config.py")
+
+
+# ── VGL-GHA014 — contents:write with AI agent on untrusted trigger ───────────
+
+_AI_NO_PERMISSIONS_BLOCK = _AI_ISSUES_TRIGGER  # baseline fixture has no permissions: block
+
+_AI_CONTENTS_WRITE = """\
+name: AI Review
+on:
+  issues:
+    types: [opened]
+permissions:
+  contents: write
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - run: claude --print "Review this issue"
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+"""
+
+_AI_CONTENTS_READ = """\
+name: AI Review
+on:
+  issues:
+    types: [opened]
+permissions:
+  contents: read
+  issues: write
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - run: claude --print "Review this issue"
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+"""
+
+
+class TestGhaAiAgentWritePermissionsRule:
+    rule = GhaAiAgentWritePermissionsRule()
+
+    def test_detects_no_permissions_block(self, wf):
+        assert self.rule.check(wf(_AI_NO_PERMISSIONS_BLOCK))
+
+    def test_detects_explicit_contents_write(self, wf):
+        assert self.rule.check(wf(_AI_CONTENTS_WRITE))
+
+    def test_contents_read_clears(self, wf):
+        assert not self.rule.check(wf(_AI_CONTENTS_READ))
+
+    def test_push_trigger_not_flagged(self, wf):
+        assert not self.rule.check(wf(_AI_PUSH_TRIGGER))
+
+    def test_no_ai_key_not_flagged(self, wf):
+        assert not self.rule.check(wf(_AI_NO_KEY))
+
+    def test_finding_is_high(self, wf):
+        assert self.rule.check(wf(_AI_NO_PERMISSIONS_BLOCK))[0].severity == Severity.HIGH
+
+    def test_finding_has_correct_rule_id(self, wf):
+        assert self.rule.check(wf(_AI_NO_PERMISSIONS_BLOCK))[0].rule_id == "VGL-GHA014"
 
     def test_does_not_apply_to_non_yml(self, tmp_path):
         assert not self.rule.applies_to(tmp_path / "config.py")

@@ -1,0 +1,20 @@
+- id: vigil
+  name: Vigil Security Scan
+  description: >
+    AI coding security co-pilot. Catches hardcoded secrets, docker-compose port
+    exposure, Dockerfile misconfigurations, AI agent patterns, prompt injection,
+    supply-chain risks, and 90+ other security anti-patterns at commit time.
+  language: python
+  entry: vigil scan .
+  pass_filenames: false
+  stages: [pre-commit]
+  additional_dependencies: []
+  minimum_pre_commit_version: "2.9.2"
+  types_or:
+    - python
+    - yaml
+    - toml
+    - json
+    - dockerfile
+    - shell
+    - text

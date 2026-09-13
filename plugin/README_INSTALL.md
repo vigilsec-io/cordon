@@ -1,6 +1,6 @@
-# Valca — Claude Code Plugin Install
+# Vigil — Claude Code Plugin Install
 
-Valca intercepts every file Claude writes and blocks it if CRITICAL or HIGH security findings are detected. No config required.
+Vigil intercepts every file Claude writes and blocks it if CRITICAL or HIGH security findings are detected. No config required.
 
 ## 3-Step Install
 
@@ -10,7 +10,7 @@ pip install vigil
 
 # 2. Wire the Claude Code hook (project-level)
 cd /your/project
-valca init
+vigil init
 
 # 3. Reload Claude Code
 # Close and reopen the Claude Code session. Done.
@@ -18,7 +18,7 @@ valca init
 
 For a user-wide install (applies to all projects):
 ```bash
-valca init --global
+vigil init --global
 ```
 
 ## What it catches
@@ -49,7 +49,7 @@ valca init --global
 
 ## Manual hook setup
 
-If `valca init` can't find `hook.sh`, add this to `.claude/settings.json`:
+If `vigil init` can't find `hook.sh`, add this to `.claude/settings.json`:
 
 ```json
 {
@@ -72,7 +72,7 @@ If `valca init` can't find `hook.sh`, add this to `.claude/settings.json`:
 ## Scan without the hook
 
 ```bash
-valca scan path/to/file.yml          # terminal output
-valca scan path/to/project/ --format json   # JSON
-valca scan path/to/project/ --format sarif  # SARIF 2.1.0 (GitHub Advanced Security)
+vigil scan path/to/file.yml          # terminal output
+vigil scan path/to/project/ --format json   # JSON
+vigil scan path/to/project/ --format sarif  # SARIF 2.1.0 (GitHub Advanced Security)
 ```

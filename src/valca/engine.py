@@ -4,9 +4,7 @@ from . import telemetry as _telemetry
 from . import findingslog as _findingslog
 
 
-# "# vigil: ignore" is kept permanently: it lives in users' own source files, and
-# dropping it would silently re-break lines they had already reviewed and accepted.
-_SUPPRESS_MARKERS = ("# valca: ignore", "# vigil: ignore", "# pragma: allowlist secret")
+_SUPPRESS_MARKERS = ("# vigil: ignore", "# pragma: allowlist secret")
 
 
 class Engine:

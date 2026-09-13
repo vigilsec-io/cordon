@@ -20,14 +20,8 @@ def load_config(start: Path) -> ValcaConfig:
     """
     current = start if start.is_dir() else start.parent
     while True:
-        # ".valcarc" is the current name; ".vigilrc" is still honoured because a
-        # config that is silently ignored re-enables rules the user had disabled
-        # and scans paths they had excluded — a failure mode with no visible signal.
-        candidate = next(
-            (c for c in (current / ".valcarc", current / ".vigilrc") if c.is_file()),
-            None,
-        )
-        if candidate is not None:
+        candidate = current / ".vigilrc"
+        if candidate.is_file():
             try:
                 with open(candidate, "rb") as f:
                     data = tomllib.load(f)

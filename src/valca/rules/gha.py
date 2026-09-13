@@ -8,6 +8,10 @@ VGL-GHA007  HIGH      Self-hosted runner with pull_request trigger (persistent r
 VGL-GHA008  HIGH      workflow_run trigger without head_branch/head_repository validation
 VGL-GHA009  CRITICAL  AI agent wired to untrusted-input trigger (issues/issue_comment/pull_request_target) + API key in env
 VGL-GHA010  HIGH      AI agent on pull_request_target without fork origin guard
+VGL-GHA011  CRITICAL  Untrusted GitHub event data (issue/PR/comment body) interpolated into an AI agent prompt
+VGL-GHA012  HIGH      AI agent on untrusted trigger with no --allowedTools restriction
+VGL-GHA013  MEDIUM    AI agent on untrusted trigger with no --max-turns limit
+VGL-GHA014  HIGH      contents: write (or no permissions: block) with AI agent on untrusted trigger
 """
 import re
 from pathlib import Path
@@ -21,6 +25,36 @@ _GH_MARKER = re.compile(r"^(?:on|jobs)\s*:", re.MULTILINE)
 _RUN_OPEN = re.compile(r"^\s+(?:-\s+)?run\s*:")
 _RUN_CLOSE = re.compile(r"^\s+(?:-\s+)?(?:uses|with|if|name|id|shell|working-directory)\s*:")
 _ENV_ASSIGN = re.compile(r"^\s+\w[\w-]*\s*:\s*\$\{\{")
+
+# ── Shared by the AI-agent rule family (VGL-GHA009, GHA011-014) ──────────────
+# AI agent CLI invocations or known action slugs
+_AI_AGENT = re.compile(
+    r"""(?x)
+    \bclaude\b          # Claude Code CLI
+    | \bgemini\b        # Gemini CLI
+    | anthropics?/claude-code-action
+    | google-github-actions/gemini-cli-action
+    | github/copilot-action
+    | copilot-swe-agent
+    """,
+    re.IGNORECASE,
+)
+
+# Triggers that accept fully attacker-controlled content.
+# Must end after the colon (no value on same line) to avoid matching
+# permissions values like "issues: write".
+_UNTRUSTED_TRIGGERS = re.compile(
+    r"^\s*(?:issues|issue_comment|pull_request_target)\s*:\s*(?:#.*)?$",
+    re.MULTILINE,
+)
+
+# AI API keys wired into the workflow environment
+_AI_API_KEY = re.compile(
+    r"ANTHROPIC_API_KEY|GEMINI_API_KEY|COPILOT_API_KEY|OPENAI_API_KEY",
+    re.IGNORECASE,
+)
+
+_ALLOWED_TOOLS = re.compile(r"--allowed-?tools", re.IGNORECASE)
 
 
 def _is_gha(path: Path, content: str) -> bool:
@@ -438,30 +472,14 @@ class GhaAiAgentUntrustedTriggerRule(Rule):
     name = "AI agent wired to untrusted-input trigger (issues/pull_request_target) with API key in env"
     severity = Severity.CRITICAL
 
-    # Triggers that accept fully attacker-controlled content
-    _DANGEROUS_TRIGGERS = re.compile(
-        r"^\s*(?:issues|issue_comment|pull_request_target)\s*:",
-        re.MULTILINE,
-    )
-
-    # AI agent CLI invocations or known action slugs
-    _AI_AGENT = re.compile(
-        r"""(?x)
-        \bclaude\b          # Claude Code CLI
-        | \bgemini\b        # Gemini CLI
-        | anthropics?/claude-code-action
-        | google-github-actions/gemini-cli-action
-        | github/copilot-action
-        | copilot-swe-agent
-        """,
-        re.IGNORECASE,
-    )
-
-    # AI API keys wired into the workflow environment
-    _API_KEY = re.compile(
-        r"ANTHROPIC_API_KEY|GEMINI_API_KEY|COPILOT_API_KEY|OPENAI_API_KEY",
-        re.IGNORECASE,
-    )
+    # Mitigations that materially reduce blast radius — all three must be present
+    # to downgrade from CRITICAL. Regex can't prove the guard logic is bulletproof
+    # (e.g. a compromised collaborator still passes an author_association check),
+    # so this downgrades the finding rather than suppressing it outright.
+    _ACTOR_GUARD = re.compile(r"author_association", re.IGNORECASE)
+    _SAFE_ROLES = re.compile(r"\b(?:OWNER|MEMBER|COLLABORATOR)\b")
+    _READONLY_CONTENTS = re.compile(r"contents:\s*read\b", re.IGNORECASE)
+    _WRITE_CONTENTS = re.compile(r"contents:\s*write\b", re.IGNORECASE)
 
     def applies_to(self, path: Path) -> bool:
         return path.suffix in _GH_EXTS
@@ -473,21 +491,52 @@ class GhaAiAgentUntrustedTriggerRule(Rule):
             return []
         if not _is_gha(path, content):
             return []
-        if not self._DANGEROUS_TRIGGERS.search(content):
+        if not _UNTRUSTED_TRIGGERS.search(content):
             return []
-        if not self._AI_AGENT.search(content):
+        if not _AI_AGENT.search(content):
             return []
-        if not self._API_KEY.search(content):
+        if not _AI_API_KEY.search(content):
             return []
+
+        mitigated = (
+            self._ACTOR_GUARD.search(content) is not None
+            and self._SAFE_ROLES.search(content) is not None
+            and self._READONLY_CONTENTS.search(content) is not None
+            and self._WRITE_CONTENTS.search(content) is None
+            and _ALLOWED_TOOLS.search(content) is not None
+        )
+        severity = Severity.MEDIUM if mitigated else Severity.CRITICAL
 
         # Report on the first dangerous trigger line
         for i, line in enumerate(content.splitlines(), 1):
             if "vigil: ignore" in line:
                 continue
-            if re.search(r"^\s*(?:issues|issue_comment|pull_request_target)\s*:", line):
+            if _UNTRUSTED_TRIGGERS.search(line):
+                if mitigated:
+                    return [Finding(
+                        rule_id=self.id,
+                        severity=severity,
+                        message=(
+                            "AI agent wired to untrusted-input trigger — actor guard, "
+                            "read-only permissions, and restricted tool access are all present, "
+                            "which substantially reduces blast radius"
+                        ),
+                        file_path=path,
+                        line=i,
+                        snippet=line.strip()[:120],
+                        fix=(
+                            "Mitigations detected (author_association guard, contents: read, "
+                            "--allowedTools). This is advisory, not blocking — Vigil can't verify the "
+                            "guard logic is bulletproof from static analysis alone (e.g. a compromised "
+                            "collaborator account still passes an author_association check). Confirm the "
+                            "guard covers every job that touches the API key, and that no step passes "
+                            "github.event.issue.body directly into the agent prompt. "
+                            "Reference: 'Comment and Control' (CVSS 9.4, April 2026)."
+                        ),
+                    )]
                 return [Finding(
                     rule_id=self.id,
-                    severity=self.severity,
+                    severity=severity,
                     message=(
                         "AI agent wired to untrusted-input trigger — "
                         "attacker can embed hidden instructions in issues/PRs (HTML comments, "
@@ -527,17 +576,6 @@ class GhaAiAgentForkGuardRule(Rule):
     severity = Severity.HIGH
 
     _PPT = re.compile(r"\bpull_request_target\b")
-    _AI_AGENT = re.compile(
-        r"""(?x)
-        \bclaude\b
-        | \bgemini\b
-        | anthropics?/claude-code-action
-        | google-github-actions/gemini-cli-action
-        | github/copilot-action
-        | copilot-swe-agent
-        """,
-        re.IGNORECASE,
-    )
     # Fork origin guard patterns
     _FORK_GUARD = re.compile(
         r"""(?x)
@@ -560,7 +598,7 @@ class GhaAiAgentForkGuardRule(Rule):
             return []
         if not self._PPT.search(content):
             return []
-        if not self._AI_AGENT.search(content):
+        if not _AI_AGENT.search(content):
             return []
         if self._FORK_GUARD.search(content):
             return []  # guard is present
@@ -591,3 +629,266 @@ class GhaAiAgentForkGuardRule(Rule):
                     ),
                 )]
         return []
+
+
+# ── VGL-GHA011 — Untrusted event data interpolated into AI agent prompt ──────
+
+class GhaAiAgentPromptInjectionRule(Rule):
+    """VGL-GHA011 — github.event.issue/pull_request/comment body or title flows
+    into the same step that invokes an AI agent (inline string or env var).
+
+    This is the actual data channel the Comment and Control attack exploits —
+    more precise than VGL-GHA009's architecture-level check, since it confirms
+    the untrusted content actually reaches the prompt rather than just co-existing
+    with a dangerous trigger somewhere in the same file.
+    """
+
+    id = "VGL-GHA011"
+    name = "Untrusted GitHub event data interpolated into AI agent prompt"
+    severity = Severity.CRITICAL
+
+    _EVENT_DATA = re.compile(
+        r"""\$\{\{\s*github\.(?:
+            event\.issue\.(?:title|body)|
+            event\.pull_request\.(?:title|body|head\.ref)|
+            event\.comment\.body
+        )\s*\}\}""",
+        re.VERBOSE | re.IGNORECASE,
+    )
+
+    def applies_to(self, path: Path) -> bool:
+        return path.suffix in _GH_EXTS
+
+    def check(self, path: Path) -> list[Finding]:
+        try:
+            content = path.read_text(errors="ignore")
+        except (OSError, PermissionError):
+            return []
+        if not _is_gha(path, content):
+            return []
+        if not _AI_AGENT.search(content):
+            return []
+
+        findings = []
+        in_run = False
+        run_start = 0
+        buffer: list[str] = []
+
+        def _flush() -> None:
+            if not buffer:
+                return
+            blob = "\n".join(buffer)
+            if not (_AI_AGENT.search(blob) and self._EVENT_DATA.search(blob)):
+                return
+            for offset, bline in enumerate(buffer):
+                if self._EVENT_DATA.search(bline):
+                    findings.append(Finding(
+                        rule_id=self.id,
+                        severity=self.severity,
+                        message=(
+                            "Untrusted GitHub event data flows into an AI agent prompt in this "
+                            "step — an attacker-controlled issue/PR/comment body or title reaches "
+                            "the agent, which is the exact channel 'Comment and Control' exploits"
+                        ),
+                        file_path=path,
+                        line=run_start + offset,
+                        snippet=bline.strip()[:120],
+                        fix=(
+                            "Never pass raw github.event.issue/pull_request/comment content "
+                            "directly into an agent prompt or its env. If the agent needs the "
+                            "content, sanitize it first (strip HTML comments, truncate, escape), "
+                            "and restrict the agent with --allowedTools so even injected "
+                            "instructions can't reach a shell."
+                        ),
+                    ))
+                    break
+
+        for i, line in enumerate(content.splitlines(), 1):
+            if "vigil: ignore" in line:
+                continue
+            if _RUN_OPEN.search(line):
+                _flush()
+                buffer = [line]
+                run_start = i
+                in_run = True
+            elif _RUN_CLOSE.search(line):
+                _flush()
+                buffer = []
+                in_run = False
+            elif in_run:
+                buffer.append(line)
+        _flush()
+        return findings
+
+
+# ── VGL-GHA012 — AI agent on untrusted trigger with no --allowedTools ────────
+
+class GhaAiAgentNoAllowedToolsRule(Rule):
+    """VGL-GHA012 — companion to VGL-GHA009/GHA011. Without --allowedTools the
+    agent keeps full shell access, so injected instructions can still run
+    ps auxeww, read /proc/self/environ, or make network calls."""
+
+    id = "VGL-GHA012"
+    name = "AI agent on untrusted trigger with no --allowedTools restriction"
+    severity = Severity.HIGH
+
+    def applies_to(self, path: Path) -> bool:
+        return path.suffix in _GH_EXTS
+
+    def check(self, path: Path) -> list[Finding]:
+        try:
+            content = path.read_text(errors="ignore")
+        except (OSError, PermissionError):
+            return []
+        if not _is_gha(path, content):
+            return []
+        if not _UNTRUSTED_TRIGGERS.search(content):
+            return []
+        if not _AI_AGENT.search(content):
+            return []
+        if not _AI_API_KEY.search(content):
+            return []
+        if _ALLOWED_TOOLS.search(content):
+            return []
+
+        for i, line in enumerate(content.splitlines(), 1):
+            if "vigil: ignore" in line:
+                continue
+            if _UNTRUSTED_TRIGGERS.search(line):
+                return [Finding(
+                    rule_id=self.id,
+                    severity=self.severity,
+                    message=(
+                        "AI agent on untrusted trigger with no --allowedTools restriction — "
+                        "the agent retains full shell access, so injected instructions can "
+                        "still exfiltrate secrets even if other guards are bypassed"
+                    ),
+                    file_path=path,
+                    line=i,
+                    snippet=line.strip()[:120],
+                    fix=(
+                        'Add --allowedTools "Read,Grep" (or the minimum the task needs) to the '
+                        "agent invocation, and explicitly disallow Bash: "
+                        '--disallowed-tools "Bash(*)". This removes the exfiltration path even '
+                        "if an attacker's injected instructions do get read by the agent."
+                    ),
+                )]
+        return []
+
+
+# ── VGL-GHA013 — AI agent on untrusted trigger with no --max-turns ───────────
+
+class GhaAiAgentNoMaxTurnsRule(Rule):
+    """VGL-GHA013 — companion to VGL-GHA009/GHA012. Without --max-turns, an
+    attacker's injected instructions can keep the agent running indefinitely —
+    burning API quota or creating a time-based side channel."""
+
+    id = "VGL-GHA013"
+    name = "AI agent on untrusted trigger with no --max-turns limit"
+    severity = Severity.MEDIUM
+
+    _MAX_TURNS = re.compile(r"--max-turns", re.IGNORECASE)
+
+    def applies_to(self, path: Path) -> bool:
+        return path.suffix in _GH_EXTS
+
+    def check(self, path: Path) -> list[Finding]:
+        try:
+            content = path.read_text(errors="ignore")
+        except (OSError, PermissionError):
+            return []
+        if not _is_gha(path, content):
+            return []
+        if not _UNTRUSTED_TRIGGERS.search(content):
+            return []
+        if not _AI_AGENT.search(content):
+            return []
+        if not _AI_API_KEY.search(content):
+            return []
+        if self._MAX_TURNS.search(content):
+            return []
+
+        for i, line in enumerate(content.splitlines(), 1):
+            if "vigil: ignore" in line:
+                continue
+            if _UNTRUSTED_TRIGGERS.search(line):
+                return [Finding(
+                    rule_id=self.id,
+                    severity=self.severity,
+                    message=(
+                        "AI agent on untrusted trigger with no --max-turns limit — injected "
+                        "instructions can keep the agent running indefinitely, burning API "
+                        "quota or keeping the runner alive as a side channel"
+                    ),
+                    file_path=path,
+                    line=i,
+                    snippet=line.strip()[:120],
+                    fix=(
+                        "Add --max-turns 10 (or whatever bounds the task) to the agent "
+                        "invocation so injected instructions can't extend execution indefinitely."
+                    ),
+                )]
+        return []
+
+
+# ── VGL-GHA014 — contents:write with AI agent on untrusted trigger ───────────
+
+class GhaAiAgentWritePermissionsRule(Rule):
+    """VGL-GHA014 — companion to VGL-GHA005/GHA009. Even with an actor guard,
+    contents: write (or no permissions: block, which often defaults to write)
+    means a bypassed or buggy guard still leaves the commit+PR exfiltration
+    path open. A review agent never needs write access to contents."""
+
+    id = "VGL-GHA014"
+    name = "contents: write permission with AI agent on untrusted trigger"
+    severity = Severity.HIGH
+
+    _PERMISSIONS_BLOCK = re.compile(r"^\s*permissions\s*:", re.MULTILINE)
+    _CONTENTS_WRITE = re.compile(r"^\s*contents\s*:\s*write\b", re.MULTILINE | re.IGNORECASE)
+
+    def applies_to(self, path: Path) -> bool:
+        return path.suffix in _GH_EXTS
+
+    def check(self, path: Path) -> list[Finding]:
+        try:
+            content = path.read_text(errors="ignore")
+        except (OSError, PermissionError):
+            return []
+        if not _is_gha(path, content):
+            return []
+        if not _UNTRUSTED_TRIGGERS.search(content):
+            return []
+        if not _AI_AGENT.search(content):
+            return []
+        if not _AI_API_KEY.search(content):
+            return []
+
+        write_match = self._CONTENTS_WRITE.search(content)
+        has_permissions_block = self._PERMISSIONS_BLOCK.search(content) is not None
+        if not write_match and has_permissions_block:
+            return []  # explicit block present and it doesn't grant contents: write
+
+        if write_match:
+            line_no = content.count("\n", 0, write_match.start()) + 1
+            snippet = write_match.group(0).strip()[:120]
+        else:
+            line_no = 1
+            snippet = "(no permissions: block found — GITHUB_TOKEN may default to write)"
+
+        return [Finding(
+            rule_id=self.id,
+            severity=self.severity,
+            message=(
+                "AI agent on untrusted trigger with contents: write permission (or no "
+                "permissions: block at all) — if any guard is bypassed or buggy, the agent "
+                "can still commit and open a PR to exfiltrate secrets"
+            ),
+            file_path=path,
+            line=line_no,
+            snippet=snippet,
+            fix=(
+                "Set permissions: {contents: read, issues: write} — a review agent only needs "
+                "read access to contents and write access to post issue/PR comments. It never "
+                "needs to push code."
+            ),
+        )]

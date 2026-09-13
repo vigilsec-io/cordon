@@ -32,12 +32,23 @@ from .deps import PipAuditRule, NpmAuditRule, OsvScannerRule
 from .k8s import K8sSecurityRule, K8sPrivilegeEscalationRule, K8sCapabilitiesRule, K8sHostPathVolumeRule
 from .iam import IamWildcardRule
 from .agency import LlmShellExecRule, AutoApprovalBypassRule, UnboundedAgentLoopRule, LlmOutputFileWriteRule
-from .mcp_security import McpToolPoisoningRule, McpDynamicDescriptionRule, McpShellToolRule
+from .mcp_security import (
+    McpToolPoisoningRule, McpDynamicDescriptionRule, McpShellToolRule,
+    McpUnpinnedOrHttpEndpointRule, McpSsrfFetchToolRule,
+)
+from .agent_config import (
+    DangerousAgentConfigInstructionRule, AgentExceptionCredentialExposureRule,
+)
 from .prompt_injection import (
     UserInputInSystemPromptRule,
     RawRequestAsLlmContentRule,
     TemplateInjectionInPromptRule,
     UnsanitizedToolOutputRule,
+    HttpRequestDataInPromptRule,
+    LlmOutputToExecRule,
+    WebhookPayloadToAgentRule,
+    DbContentInPromptRule,
+    UserInputToVectorStoreRule,
 )
 from .shell import ShellSecretInjectionRule
 from .web import SsrfRule, SqlInjectionFstringRule, SqlOrmRawRule, CorsWildcardRule, SslVerifyDisabledRule
@@ -54,6 +65,8 @@ from .gha import (
     GhaMissingPermissionsRule, GhaCachePoisoningRule,
     GhaSelfHostedOnPrRule, GhaWorkflowRunNoRefRule,
     GhaAiAgentUntrustedTriggerRule, GhaAiAgentForkGuardRule,
+    GhaAiAgentPromptInjectionRule, GhaAiAgentNoAllowedToolsRule,
+    GhaAiAgentNoMaxTurnsRule, GhaAiAgentWritePermissionsRule,
 )
 from .xss import XssRule
 from .auth import JwtAlgorithmNoneRule, JwtVerifyDisabledRule, WeakSecretKeyRule, DebugModeEnabledRule
@@ -125,11 +138,20 @@ DEFAULT_RULES: list[Rule] = [
     McpToolPoisoningRule(),
     McpDynamicDescriptionRule(),
     McpShellToolRule(),
+    McpUnpinnedOrHttpEndpointRule(),
+    McpSsrfFetchToolRule(),
+    DangerousAgentConfigInstructionRule(),
+    AgentExceptionCredentialExposureRule(),
     # Prompt injection in AI-calling code
     UserInputInSystemPromptRule(),
     RawRequestAsLlmContentRule(),
     TemplateInjectionInPromptRule(),
     UnsanitizedToolOutputRule(),
+    HttpRequestDataInPromptRule(),
+    LlmOutputToExecRule(),
+    WebhookPayloadToAgentRule(),
+    DbContentInPromptRule(),
+    UserInputToVectorStoreRule(),
     # Shell script secret leakage
     ShellSecretInjectionRule(),
     # Web security — SSRF, SQL injection, CORS, SSL
@@ -164,6 +186,10 @@ DEFAULT_RULES: list[Rule] = [
     GhaWorkflowRunNoRefRule(),
     GhaAiAgentUntrustedTriggerRule(),
     GhaAiAgentForkGuardRule(),
+    GhaAiAgentPromptInjectionRule(),
+    GhaAiAgentNoAllowedToolsRule(),
+    GhaAiAgentNoMaxTurnsRule(),
+    GhaAiAgentWritePermissionsRule(),
     # Cross-Site Scripting
     XssRule(),
     # Broken authentication
@@ -212,6 +238,11 @@ __all__ = [
     "IamWildcardRule",
     "LlmShellExecRule", "AutoApprovalBypassRule", "UnboundedAgentLoopRule", "LlmOutputFileWriteRule",
     "McpToolPoisoningRule", "McpDynamicDescriptionRule", "McpShellToolRule",
+    "McpUnpinnedOrHttpEndpointRule", "McpSsrfFetchToolRule",
+    "DangerousAgentConfigInstructionRule", "AgentExceptionCredentialExposureRule",
     "UserInputInSystemPromptRule", "RawRequestAsLlmContentRule",
     "TemplateInjectionInPromptRule", "UnsanitizedToolOutputRule",
+    "HttpRequestDataInPromptRule", "LlmOutputToExecRule",
+    "WebhookPayloadToAgentRule", "DbContentInPromptRule",
+    "UserInputToVectorStoreRule",
 ]

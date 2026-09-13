@@ -20,6 +20,13 @@ SEVERITY_ORDER: dict["Severity", int] = {
     Severity.INFO: 4,
 }
 
+# Hard cap on snippet length, enforced regardless of what a rule passes in.
+# A matched line is never legitimately this long to show a human; the cap
+# also bounds how much attacker-controlled text (e.g. injected instructions
+# riding along in a matched line) can flow back into an AI assistant's
+# context via the hook's output.
+_MAX_SNIPPET_LEN = 200
+
 
 @dataclass
 class Finding:
@@ -33,6 +40,10 @@ class Finding:
     # Semantic category for deduplication when multiple rules catch the same root cause.
     # e.g. "root_user", "unpinned_image", "secret_in_layer"
     category: str | None = None
+
+    def __post_init__(self) -> None:
+        if self.snippet and len(self.snippet) > _MAX_SNIPPET_LEN:
+            self.snippet = self.snippet[: _MAX_SNIPPET_LEN - 1] + "…"
 
 
 class Rule(ABC):

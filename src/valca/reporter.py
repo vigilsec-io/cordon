@@ -2,6 +2,21 @@ import json
 import sys
 from pathlib import Path
 from .rules import Finding, Severity, SEVERITY_ORDER
+try:  # optional: ships only in builds licensed for compliance mapping
+    from . import compliance as _comp
+except ImportError:  # community build — findings carry no compliance tags
+    _comp = None
+
+
+def _compliance_tags(rule_id: str):
+    """Compliance mappings, when this build is licensed for them.
+
+    The community build ships without the mapping module; findings are complete
+    without it, they simply carry no framework annotations. Routing every lookup
+    through here means a new call site cannot forget the guard.
+    """
+    return _comp.get(rule_id) if _comp is not None else None
+
 
 _SARIF_LEVEL = {
     Severity.CRITICAL: "error",
@@ -122,10 +137,24 @@ def report_sarif(results: dict[Path, list[Finding]], tool_version: str | None = 
         if f.rule_id not in rule_index:
             rule_index[f.rule_id] = len(rule_index)
 
-    sarif_rules = [
-        {"id": rid, "name": rid.replace("-", ""), "shortDescription": {"text": rid}}
-        for rid in rule_index
-    ]
+    def _sarif_rule(rid: str) -> dict:
+        tags = _compliance_tags(rid)
+        rule: dict = {
+            "id": rid,
+            "name": rid.replace("-", ""),
+            "shortDescription": {"text": rid},
+        }
+        if tags:
+            rule["properties"] = {
+                "tags": (
+                    [f"OWASP:{t}" for t in tags.get("owasp", [])]
+                    + [f"NIST-SSDF:{t}" for t in tags.get("nist-ssdf", [])]
+                    + tags.get("cwe", [])
+                ),
+            }
+        return rule
+
+    sarif_rules = [_sarif_rule(rid) for rid in rule_index]
 
     sarif_results = []
     for path, findings in results.items():
@@ -178,5 +207,8 @@ def report_json(results: dict[Path, list[Finding]]) -> str:
             }
             if f.category:
                 entry["category"] = f.category
+            tags = _compliance_tags(f.rule_id)
+            if tags:
+                entry["compliance"] = tags
             out.append(entry)
     return json.dumps(out, indent=2)

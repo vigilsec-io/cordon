@@ -61,6 +61,39 @@ def test_while_true_with_llm_flagged(tmp_path):
     f = _f(tmp_path, code)
     assert any(fi.rule_id == "VGL-A003" for fi in loop_rule.check(f))
 
+def test_daemon_keepalive_loop_not_flagged(tmp_path):
+    # Regression: a scheduler keep-alive loop in a module that ALSO calls an LLM
+    # elsewhere is not an agent loop. The rule previously matched any `while True:`
+    # in any file containing an LLM call, so every APScheduler daemon tripped it.
+    code = (
+        "import anthropic\n"
+        "import asyncio\n"
+        "\n"
+        "def synthesize(prompt):\n"
+        "    return client.messages.create(prompt)\n"
+        "\n"
+        "async def main():\n"
+        "    scheduler.start()\n"
+        "    while True:\n"
+        "        await asyncio.sleep(60)\n"
+    )
+    f = _f(tmp_path, code)
+    assert loop_rule.check(f) == []
+
+def test_llm_call_one_hop_from_loop_still_flagged(tmp_path):
+    # Must not overcorrect: real agent loops delegate to a helper.
+    code = (
+        "import anthropic\n"
+        "\n"
+        "def run_turn(state):\n"
+        "    return client.messages.create(state)\n"
+        "\n"
+        "while True:\n"
+        "    state = run_turn(state)\n"
+    )
+    f = _f(tmp_path, code)
+    assert any(fi.rule_id == "VGL-A003" for fi in loop_rule.check(f))
+
 def test_while_true_with_max_iter_not_flagged(tmp_path):
     code = "import anthropic\nmax_iterations = 10\nwhile True:\n    pass"
     f = _f(tmp_path, code)

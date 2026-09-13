@@ -1,15 +1,13 @@
-"""Anonymous, local-only telemetry for Valca.
+"""Anonymous, local-only telemetry for Vigil.
 
 Collects only: rule_id, severity, file_ext, timestamp, fp flag.
 Never: file path, code snippet, finding message, or any user-identifiable data.
 
-Stored at ~/.valca/events.jsonl (line-delimited JSON). History from the former
-~/.vigil/ location is migrated automatically on first use.
-Opt-out: set VALCA_NO_TELEMETRY=1 (VIGIL_NO_TELEMETRY still honoured) or add
-`telemetry = false` to .valcarc.
+Stored at ~/.vigil/events.jsonl (line-delimited JSON).
+Opt-out: set VIGIL_NO_TELEMETRY=1 or add `telemetry = false` to .vigilrc.
 
 Events are local-only by default — no network calls are made in this module.
-`valca stats` and `valca stats --format json` read events.jsonl for display.
+`vigil stats` and `vigil stats --format json` read events.jsonl for display.
 """
 from __future__ import annotations
 
@@ -22,36 +20,14 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from .rules.base import Finding
 
-_EVENTS_FILE = Path.home() / ".valca" / "events.jsonl"
-_LEGACY_EVENTS_FILE = Path.home() / ".vigil" / "events.jsonl"
-
-# Both names are honoured permanently. Dropping the old one would silently turn
-# telemetry back on for anyone who had opted out — a privacy regression the user
-# would have no way to notice.
-_OPT_OUT_ENVS = ("VALCA_NO_TELEMETRY", "VIGIL_NO_TELEMETRY")
+_EVENTS_FILE = Path.home() / ".vigil" / "events.jsonl"
+_OPT_OUT_ENV = "VIGIL_NO_TELEMETRY"
 
 
 def _is_opted_out(telemetry_config: bool = True) -> bool:
     if not telemetry_config:
         return True
-    return any(os.environ.get(e, "").strip() not in ("", "0") for e in _OPT_OUT_ENVS)
-
-
-def _migrate_legacy_store() -> None:
-    """Move history from the old directory once, preserving it.
-
-    The event log is the dataset behind per-rule precision. Orphaning it on a
-    rename would quietly discard every false-positive signal collected so far.
-    Never raises: telemetry must not break a scan.
-    """
-    try:
-        if _EVENTS_FILE.exists() or not _LEGACY_EVENTS_FILE.exists():
-            return
-        _EVENTS_FILE.parent.mkdir(parents=True, exist_ok=True)
-        _LEGACY_EVENTS_FILE.replace(_EVENTS_FILE)
-        os.chmod(_EVENTS_FILE, 0o600)
-    except Exception:  # noqa: BLE001
-        pass
+    return os.environ.get(_OPT_OUT_ENV, "").strip() not in ("", "0")
 
 
 def record(
@@ -59,17 +35,16 @@ def record(
     telemetry_enabled: bool = True,
     fp: bool = False,
 ) -> None:
-    """Append one event per finding to ~/.valca/events.jsonl.
+    """Append one event per finding to ~/.vigil/events.jsonl.
 
     When fp=True the event represents a suppressed finding (false positive):
-    the user added '# valca: ignore' or '# pragma: allowlist secret'.
+    the user added '# vigil: ignore' or '# pragma: allowlist secret'.
 
     Silently swallows all errors — telemetry must never break the scan.
     """
     if _is_opted_out(telemetry_enabled) or not findings:
         return
     try:
-        _migrate_legacy_store()
         _EVENTS_FILE.parent.mkdir(parents=True, exist_ok=True)
         is_new_file = not _EVENTS_FILE.exists()
         ts = datetime.now(timezone.utc).isoformat()
@@ -114,7 +89,6 @@ def summary() -> dict:
     }
     """
     try:
-        _migrate_legacy_store()
         if not _EVENTS_FILE.exists():
             return {}
 

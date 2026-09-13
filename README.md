@@ -136,7 +136,7 @@ Valca catches the vulnerable workflow (`issues:` trigger + AI agent + API key in
 
 ## Rules
 
-**102 rules across 26 categories.** All built-in, stdlib-only, zero runtime dependencies.
+**116 rules across 27 categories.** All built-in, stdlib-only, zero runtime dependencies.
 
 This catalogue is generated from the rule registry — it cannot drift from the shipped engine.
 
@@ -158,10 +158,10 @@ This catalogue is generated from the rule registry — it cannot drift from the 
 | VGL-S008 | CRITICAL | Stripe live secret key |
 | VGL-S009 | CRITICAL | Slack token hardcoded |
 | VGL-S010 | CRITICAL | Provider API key hardcoded (OpenAI / GitHub / GitLab / Google) |
-| VGL-S011 | HIGH | Insecure placeholder default for security-critical config |
+| VGL-S012 | HIGH | Insecure placeholder default for security-critical config |
 
 
-### GitHub Actions — AI Agent Surface (9 rules)
+### GitHub Actions — AI Agent Surface (13 rules)
 
 | Rule | Severity | What it catches |
 |------|----------|----------------|
@@ -174,6 +174,25 @@ This catalogue is generated from the rule registry — it cannot drift from the 
 | VGL-GHA008 | HIGH | workflow_run trigger without ref/repo validation |
 | VGL-GHA009 | CRITICAL | AI agent wired to untrusted-input trigger (issues/pull_request_target) with API key in env |
 | VGL-GHA010 | HIGH | AI agent on pull_request_target without fork origin guard |
+| VGL-GHA011 | CRITICAL | Untrusted GitHub event data interpolated into AI agent prompt |
+| VGL-GHA012 | HIGH | AI agent on untrusted trigger with no --allowedTools restriction |
+| VGL-GHA013 | MEDIUM | AI agent on untrusted trigger with no --max-turns limit |
+| VGL-GHA014 | HIGH | contents: write permission with AI agent on untrusted trigger |
+
+
+### AI Agent — Prompt Injection (9 rules)
+
+| Rule | Severity | What it catches |
+|------|----------|----------------|
+| VGL-PI001 | CRITICAL | User input interpolated into the LLM system prompt |
+| VGL-PI002 | HIGH | Raw HTTP request body used as LLM message content |
+| VGL-PI003 | HIGH | String formatting used to build prompts with user data |
+| VGL-PI004 | MEDIUM | Tool output appended to the conversation without sanitization |
+| VGL-PI005 | CRITICAL | HTTP request data flows into an LLM prompt unsanitised |
+| VGL-PI006 | CRITICAL | LLM response flows into subprocess, exec or eval |
+| VGL-PI007 | HIGH | Webhook payload flows directly into an AI agent |
+| VGL-PI008 | HIGH | Database content interpolated into a prompt — second-order injection |
+| VGL-PI009 | HIGH | User input written into a vector store — memory poisoning |
 
 
 ### Dockerfile Hardening (8 rules)
@@ -227,6 +246,17 @@ This catalogue is generated from the rule registry — it cannot drift from the 
 | VGL-SSTI001 | CRITICAL | Server-Side Template Injection — user input rendered as Jinja2 template |
 
 
+### MCP Server Security (5 rules)
+
+| Rule | Severity | What it catches |
+|------|----------|----------------|
+| VGL-MCP001 | CRITICAL | Prompt injection embedded in MCP tool description |
+| VGL-MCP002 | HIGH | MCP tool description built from user-controlled data |
+| VGL-MCP003 | HIGH | Shell execution in an MCP tool handler without a sandbox |
+| VGL-MCP004 | HIGH | MCP server config uses an unpinned package or plaintext HTTP endpoint |
+| VGL-MCP005 | HIGH | MCP fetch tool takes an agent-controlled URL with no allowlist |
+
+
 ### Web Application Security (5 rules)
 
 | Rule | Severity | What it catches |
@@ -246,16 +276,6 @@ This catalogue is generated from the rule registry — it cannot drift from the 
 | VGL-A002 | HIGH | Hardcoded auto-approval disables human-in-the-loop |
 | VGL-A003 | HIGH | Unbounded agent loop with no iteration limit |
 | VGL-A004 | HIGH | LLM response written to disk without validation |
-
-
-### AI Agent — Prompt Injection (4 rules)
-
-| Rule | Severity | What it catches |
-|------|----------|----------------|
-| VGL-PI001 | CRITICAL | User input interpolated into the LLM system prompt |
-| VGL-PI002 | HIGH | Raw HTTP request body used as LLM message content |
-| VGL-PI003 | HIGH | String formatting used to build prompts with user data |
-| VGL-PI004 | MEDIUM | Tool output appended to the conversation without sanitization |
 
 
 ### Authentication & Session (4 rules)
@@ -326,13 +346,12 @@ This catalogue is generated from the rule registry — it cannot drift from the 
 | VGL-GH003 | HIGH | GitHub Actions uses mutable action ref (tag or branch) |
 
 
-### MCP Server Security (3 rules)
+### AI Agent — Configuration Files (2 rules)
 
 | Rule | Severity | What it catches |
 |------|----------|----------------|
-| VGL-MCP001 | CRITICAL | Prompt injection embedded in MCP tool description |
-| VGL-MCP002 | HIGH | MCP tool description built from user-controlled data |
-| VGL-MCP003 | HIGH | Shell execution in an MCP tool handler without a sandbox |
+| VGL-AGENT001 | CRITICAL | Shell execution or exfiltration instructions in an AI agent config file |
+| VGL-AGENT002 | HIGH | Credentials exposed through an exception handler in agent code |
 
 
 ### JavaScript / TypeScript (2 rules)

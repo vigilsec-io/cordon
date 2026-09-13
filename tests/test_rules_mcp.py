@@ -1,12 +1,15 @@
 import pytest
 from valca.rules.mcp_security import (
     McpToolPoisoningRule, McpDynamicDescriptionRule, McpShellToolRule,
+    McpUnpinnedOrHttpEndpointRule, McpSsrfFetchToolRule,
 )
 from valca.rules.base import Severity
 
 poison_rule = McpToolPoisoningRule()
 dynamic_rule = McpDynamicDescriptionRule()
 shell_rule = McpShellToolRule()
+config_rule = McpUnpinnedOrHttpEndpointRule()
+ssrf_rule = McpSsrfFetchToolRule()
 
 
 def _f(tmp_path, content, name="server.py"):
@@ -98,3 +101,107 @@ def test_does_not_apply_to_yaml(tmp_path):
     f = tmp_path / "config.yaml"
     f.write_text("key: value")
     assert shell_rule.applies_to(f) is False
+
+
+# VGL-MCP004: unpinned / HTTP MCP server endpoint config
+def test_unpinned_npx_package_flagged(tmp_path):
+    content = '{"mcpServers": {"my-server": {"command": "npx", "args": ["@company/my-mcp-server"]}}}'
+    f = _f(tmp_path, content, name="claude_desktop_config.json")
+    findings = config_rule.check(f)
+    assert any(fi.rule_id == "VGL-MCP004" for fi in findings)
+    assert findings[0].severity == Severity.HIGH
+
+def test_at_latest_npx_package_flagged(tmp_path):
+    content = '{"mcpServers": {"s": {"command": "npx", "args": ["@company/pkg@latest"]}}}'
+    f = _f(tmp_path, content, name="claude_desktop_config.json")
+    assert config_rule.check(f) != []
+
+def test_http_endpoint_flagged(tmp_path):
+    content = '{"mcpServers": {"remote": {"url": "http://mcp.example.com/sse"}}}'
+    f = _f(tmp_path, content, name="claude_desktop_config.json")
+    findings = config_rule.check(f)
+    assert any(fi.rule_id == "VGL-MCP004" for fi in findings)
+
+def test_http_localhost_still_flagged(tmp_path):
+    # Ticket treats localhost HTTP as risky too — defense in depth.
+    content = '{"mcpServers": {"local": {"url": "http://localhost:3000/mcp"}}}'
+    f = _f(tmp_path, content, name="claude_desktop_config.json")
+    assert config_rule.check(f) != []
+
+def test_pinned_npx_package_not_flagged(tmp_path):
+    content = '{"mcpServers": {"my-server": {"command": "npx", "args": ["@company/my-mcp-server@1.2.3"]}}}'
+    f = _f(tmp_path, content, name="claude_desktop_config.json")
+    assert config_rule.check(f) == []
+
+def test_https_endpoint_not_flagged(tmp_path):
+    content = '{"mcpServers": {"remote": {"url": "https://mcp.example.com/sse"}}}'
+    f = _f(tmp_path, content, name="claude_desktop_config.json")
+    assert config_rule.check(f) == []
+
+def test_invalid_json_not_flagged(tmp_path):
+    f = _f(tmp_path, "{not valid json", name="claude_desktop_config.json")
+    assert config_rule.check(f) == []
+
+def test_config_does_not_apply_to_non_config_json(tmp_path):
+    f = tmp_path / "package.json"
+    f.write_text('{"mcpServers": {"s": {"command": "npx", "args": ["@x/y"]}}}')
+    assert config_rule.applies_to(f) is False
+
+
+# VGL-MCP005: SSRF via fetch/http_request tool
+def test_unvalidated_fetch_url_flagged(tmp_path):
+    code = (
+        "from fastmcp import FastMCP\n"
+        "mcp = FastMCP()\n\n"
+        "@mcp.tool()\n"
+        "def fetch(url: str) -> str:\n"
+        "    return httpx.get(url).text\n"
+    )
+    f = _f(tmp_path, code)
+    findings = ssrf_rule.check(f)
+    assert any(fi.rule_id == "VGL-MCP005" for fi in findings)
+    assert findings[0].severity == Severity.HIGH
+
+def test_http_request_tool_variant_flagged(tmp_path):
+    code = (
+        "from mcp import FastMCP\n\n"
+        "@mcp.tool()\n"
+        "def http_request(method: str, url: str, body: str = \"\") -> str:\n"
+        "    response = requests.request(method, url, data=body)\n"
+        "    return response.text\n"
+    )
+    f = _f(tmp_path, code)
+    assert ssrf_rule.check(f) != []
+
+def test_allowlisted_fetch_not_flagged(tmp_path):
+    code = (
+        "from fastmcp import FastMCP\n"
+        "mcp = FastMCP()\n\n"
+        "@mcp.tool()\n"
+        "def fetch(url: str) -> str:\n"
+        "    allowed = [\"https://api.example.com\"]\n"
+        "    if not any(url.startswith(a) for a in allowed):\n"
+        "        raise ValueError(\"not allowed\")\n"
+        "    return httpx.get(url).text\n"
+    )
+    f = _f(tmp_path, code)
+    assert ssrf_rule.check(f) == []
+
+def test_fetch_without_http_call_not_flagged(tmp_path):
+    code = (
+        "from fastmcp import FastMCP\n"
+        "mcp = FastMCP()\n\n"
+        "@mcp.tool()\n"
+        "def fetch(url: str) -> str:\n"
+        "    return cache.get(url)\n"
+    )
+    f = _f(tmp_path, code)
+    assert ssrf_rule.check(f) == []
+
+def test_no_mcp_signal_not_flagged_ssrf(tmp_path):
+    code = (
+        "def fetch(url: str) -> str:\n"
+        "    return httpx.get(url).text\n"
+    )
+    f = _f(tmp_path, code)
+    assert ssrf_rule.check(f) == []

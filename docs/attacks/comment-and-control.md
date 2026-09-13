@@ -3,8 +3,8 @@
 > **Attack class:** Prompt injection via GitHub Issues / Pull Requests  
 > **CVE:** CVSS 9.4 (Critical) — April 2026  
 > **Affected:** Claude Code Security Review, Gemini CLI Action, GitHub Copilot Agent  
-> **Valca rules:** VGL-GHA009 (CRITICAL), VGL-GHA010 (HIGH)  
-> **Status:** Patched in Claude Code 2.1.128 (May 5, 2026); Valca prevents the vulnerable configuration from being committed in the first place.
+> **Vigil rules:** VGL-GHA009 (CRITICAL), VGL-GHA010 (HIGH)  
+> **Status:** Patched in Claude Code 2.1.128 (May 5, 2026); Vigil prevents the vulnerable configuration from being committed in the first place.
 
 ---
 
@@ -84,9 +84,9 @@ The agent reads the issue, processes the hidden instructions, and:
 
 ---
 
-## Valca Catches This Before the Workflow Is Ever Committed
+## Vigil Catches This Before the Workflow Is Ever Committed
 
-When a developer writes `ai-review.yml`, Valca's PostToolUse hook fires immediately:
+When a developer writes `ai-review.yml`, Vigil's PostToolUse hook fires immediately:
 
 ```
 BLOCKED — 2 CRITICAL/HIGH finding(s):
@@ -123,7 +123,7 @@ on:
 # Missing: if: github.event.pull_request.head.repo.full_name == github.repository
 ```
 
-Any stranger opening a PR triggers the agent with full secret access. Valca catches this as VGL-GHA010 (HIGH).
+Any stranger opening a PR triggers the agent with full secret access. Vigil catches this as VGL-GHA010 (HIGH).
 
 ---
 
@@ -174,8 +174,8 @@ Key changes:
 | Semgrep | ❌ | No AI-agent workflow rules |
 | Snyk | ❌ | No AI-agent workflow rules |
 | GitHub Advanced Security | ❌ | Detects known secret strings; base64 bypass evades it |
-| **Valca VGL-GHA009** | **✅** | Detects AI agent + untrusted trigger + API key in same workflow |
-| **Valca VGL-GHA010** | **✅** | Detects AI agent + pull_request_target + missing fork guard |
+| **Vigil VGL-GHA009** | **✅** | Detects AI agent + untrusted trigger + API key in same workflow |
+| **Vigil VGL-GHA010** | **✅** | Detects AI agent + pull_request_target + missing fork guard |
 
 ---
 
