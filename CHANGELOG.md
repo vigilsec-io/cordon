@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.5.0
+
+### Added
+
+- **Sixteen rules, covering the agentic attack surface.** These existed in development
+  and had never shipped. The engine now carries **116 rules across 27 categories**.
+
+| Family | Rules | Catches |
+|---|---|---|
+| GitHub Actions — AI agent surface | VGL-GHA011–014 | Untrusted event data reaching an agent prompt; missing `--allowedTools` / `--max-turns`; `contents: write` on agent workflows |
+| Prompt injection — application level | VGL-PI005–009 | HTTP, webhook and database data flowing into prompts; LLM output reaching `exec`; vector-store poisoning |
+| AI agent configuration files | VGL-AGENT001–002 | Shell execution and exfiltration instructions in `CLAUDE.md` / `copilot-instructions.md` (CVE-2025-59536); credentials exposed through agent exception handlers |
+| MCP server | VGL-MCP004–005 | Unpinned packages and plaintext HTTP endpoints in MCP config; SSRF through an agent-controlled URL with no allowlist |
+
+- **`.pre-commit-hooks.yaml`** — the pre-commit integration could not work without it.
+
+### Note on compliance mapping
+
+Rule-to-framework mapping (OWASP Top 10, NIST SSDF, CWE) is a licensed feature and is not
+part of this distribution. Findings are complete without it; they simply carry no framework
+annotations. Nothing else differs between builds.
+
+
 ## 0.4.1
 
 ### Fixed
